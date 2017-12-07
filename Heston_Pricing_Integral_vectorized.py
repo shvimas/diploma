@@ -7,7 +7,7 @@ from integration import integrate_simpson_vectorized
 '''
 
 
-def price_heston(pars: ndarray, args: tuple) -> ndarray:
+def price_heston(pars: tuple, args: tuple) -> ndarray:
     if (len(args)) != 6:
         raise Exception("args should have 6 parameters: s, k, t, r, q, is_call")
 
@@ -22,6 +22,10 @@ def price_heston(pars: ndarray, args: tuple) -> ndarray:
             k = np.array([float(k)])
         else:
             raise Exception("k(strikes) should be either np.array or numeric")
+
+    # natural constraint
+    #if 2 * kappa * theta <= sigma ** 2:
+    #    return np.array([Inf] * len(k))
 
     if is_call:
         func = heston_call_value_int

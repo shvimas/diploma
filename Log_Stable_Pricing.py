@@ -70,6 +70,8 @@ def ls_call_price(strikes, beta, r, d, t, sigma, alpha):
 
     result = np.array([0] * len(strikes))
 
+    # todo: resolve integrands below -- not working at all
+
     for j in range(1, len(strikes)):
         integrand5_1 = np.real(exp(-1j * v1 * strikes[j]) * psi1)
         integrand5_2 = np.real(exp(-1j * v2 * strikes[j]) * psi2)
