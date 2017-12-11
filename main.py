@@ -34,7 +34,7 @@ def optimize_heston(info, strikes_call, strikes_put, prices_call, prices_put):
         actual = prices_call[day]
 
         def opt_func4heston(pars, *args) -> float:
-            quality = opt_helper(pars, args + (model, metric, actual))
+            quality = estimate_model(pars, args, model, metric, actual)
 
             msg = metric + ": " + str(quality) + " with params: " + ", ".join(list(map(lambda x: str(x), pars)))
             print(msg)
@@ -82,7 +82,7 @@ def optimize_vg(info, strikes_call, strikes_put, prices_call, prices_put):
         actual = prices_call[day]
 
         def opt_func4vg(pars, *args) -> float:
-            quality = opt_helper(pars, args + (model, metric, actual))
+            quality = estimate_model(pars, args, model, metric, actual)
             msg = metric + ": " + str(quality) + " with params: " + ", ".join(list(map(lambda x: str(x), pars)))
             print(msg)
 
