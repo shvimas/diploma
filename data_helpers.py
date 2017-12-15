@@ -38,3 +38,12 @@ def read_data(file):
     strikes_put = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), strikes_put))
 
     return info, strikes_call, strikes_put, prices_call, prices_put
+
+
+def sort_data(file):
+    with open(file) as input, open("sorted_" + file, "w") as output:
+        output.write("\n".join(sorted(list(input.readlines()), key=lambda l: l.split()[1])))
+
+
+def array2str(arr: np.ndarray) -> str:
+    return ", ".join(list(map(lambda x: str(x), arr)))

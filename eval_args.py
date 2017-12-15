@@ -1,5 +1,7 @@
 class EvalArgs:
-    def __init__(self, **kwargs):
+    def __init__(self, args: dict = dict(), **kwargs):
+        if len(args) != 0:
+            kwargs = args
         if len(kwargs) == 0:
             return
         self.spot = kwargs[self.__get_name({"s", "spot", "price"}, kwargs.keys(), "spot")]

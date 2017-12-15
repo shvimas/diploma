@@ -1,7 +1,6 @@
 import numpy as np
-import scipy.optimize as opt
 from sklearn.metrics import mean_absolute_error
-from modeling import models
+import modeling
 from eval_args import EvalArgs
 
 
@@ -18,13 +17,14 @@ def mean_ratio(predicted, actual):
     return mean(tmp)
 
 
+models = modeling.models  # dummy solution; w/o this cyclic imports ruin the thing
 metrics = {
         "MAE": mean_absolute_error,
         "mean ratio": mean_ratio
     }
 
 
-def apply_metric(predicted, actual, metric="MAE"):
+def apply_metric(predicted, actual, metric="MAE") -> float:
     return metrics[metric](predicted, actual)
 
 
@@ -37,7 +37,7 @@ def is_good_enough(quality: float, metric: str) -> bool:
     return quality < values[metric]
 
 
-def estimate_model(pars: tuple, args: EvalArgs, model: str, metric: str, prices: np.ndarray):
+def estimate_model(pars: tuple, args: EvalArgs, model: str, metric: str, prices: np.ndarray) -> float:
     """
 
     :param pars: model parameters
