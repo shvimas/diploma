@@ -41,7 +41,7 @@ def optimize_heston(info: list,
                                                                             prices_put,
                                                                             info)
 
-    with open("Heston_" + metric + "_good_params.txt", "a") as good:
+    with open("params/Heston_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
         model = "heston"
         actual = prices_call[day]
@@ -91,7 +91,7 @@ def optimize_vg(info: list,
                                                                             prices_put,
                                                                             info)
 
-    with open("VG_" + metric + "_good_params.txt", "a") as good:
+    with open("params/VG_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
         model = "vg"
         actual = prices_call[day]
