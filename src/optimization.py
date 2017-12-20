@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics import mean_absolute_error
-from src import modeling
-from src.eval_args import EvalArgs
+import modeling
+from eval_args import EvalArgs
 
 
 def mean(seq):

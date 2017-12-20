@@ -1,5 +1,5 @@
-from src.Heston_Pricing_Integral_vectorized import price_heston
-from src.VG_Pricing_Integral_vectorized import price_vg
+from Heston_Pricing_Integral_vectorized import price_heston
+from VG_Pricing_Integral_vectorized import price_vg
 import csv
 import math
 

@@ -1,5 +1,5 @@
 import csv
-from src.info_struct import Info
+from info_struct import Info
 import numpy as np
 
 

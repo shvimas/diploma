@@ -1,6 +1,6 @@
 from scipy import *
 import numpy as np
-from src.integration import integrate_simpson_vectorized
+from integration import integrate_simpson_vectorized
 
 '''
     2 * kappa * theta > sigma ** 2

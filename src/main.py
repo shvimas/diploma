@@ -1,10 +1,10 @@
-from src.data_helpers import read_data, array2str
-from src.optimization import estimate_model, is_good_enough
-from src.Heston_Pricing_Integral_vectorized import price_heston
-from src.VG_Pricing_Integral_vectorized import price_vg
+from data_helpers import read_data, array2str
+from optimization import estimate_model, is_good_enough
+from Heston_Pricing_Integral_vectorized import price_heston
+from VG_Pricing_Integral_vectorized import price_vg
 import numpy as np
 import scipy.optimize as opt
-from src.eval_args import EvalArgs
+from eval_args import EvalArgs
 
 
 def remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info):

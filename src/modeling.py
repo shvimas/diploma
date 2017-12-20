@@ -1,12 +1,12 @@
-from src.VG_Pricing_Integral_vectorized import price_vg
-from src.Heston_Pricing_Integral_vectorized import price_heston
-from src.Log_Stable_Pricing import price_ls
+from VG_Pricing_Integral_vectorized import price_vg
+from Heston_Pricing_Integral_vectorized import price_heston
+from Log_Stable_Pricing import price_ls
 import numpy as np
 import scipy.optimize as opt
-from src.eval_args import EvalArgs
-from src.pars_range import ParsRange
-from src import optimization
-from src.data_helpers import array2str
+from eval_args import EvalArgs
+from pars_range import ParsRange
+import optimization
+from data_helpers import array2str
 
 
 par_bounds = {
