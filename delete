@@ -1,0 +1,3 @@
+docker stop diploma-worker
+docker rm diploma-worker
+docker rmi diploma-worker
