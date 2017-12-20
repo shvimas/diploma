@@ -1,6 +1,6 @@
 from scipy import *
 import numpy as np
-from integration import integrate_simpson_vectorized, pair_max
+from src.integration import integrate_simpson_vectorized, pair_max
 
 '''
     theta ** 2 + (2 * sigma ** 2) / nu > 0

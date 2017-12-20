@@ -1,4 +1,6 @@
+'''
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_vg():
@@ -37,3 +39,4 @@ def plot_vg():
     fig.colorbar(surf, shrink=0.5, aspect=5)
 
     plt.show()
+'''

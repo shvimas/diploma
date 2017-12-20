@@ -1,6 +1,6 @@
 from scipy import *
 import numpy as np
-from integration import integrate_simpson_vectorized
+from src.integration import integrate_simpson_vectorized
 
 
 def price_ls(pars: tuple, args: tuple) -> ndarray:

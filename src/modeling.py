@@ -1,12 +1,12 @@
-from VG_Pricing_Integral_vectorized import price_vg
-from Heston_Pricing_Integral_vectorized import price_heston
-from Log_Stable_Pricing import price_ls
+from src.VG_Pricing_Integral_vectorized import price_vg
+from src.Heston_Pricing_Integral_vectorized import price_heston
+from src.Log_Stable_Pricing import price_ls
 import numpy as np
 import scipy.optimize as opt
-from eval_args import EvalArgs
-from pars_range import ParsRange
-import optimization
-from data_helpers import array2str
+from src.eval_args import EvalArgs
+from src.pars_range import ParsRange
+from src import optimization
+from src.data_helpers import array2str
 
 
 par_bounds = {
@@ -79,7 +79,7 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple,
                             local=False)
         pars2 = result.x
 
-        with open("params/" + model1 + "_" + model2 + ".txt", "a") as out:
+        with open("params/" + model1 + "_" + model2 + "_" + metric + ".txt", "a") as out:
             out.write(array2str(pars1) + " --> " + array2str(pars2) +
                       " with quality metric " + metric + ": " + str(result.fun) + "\n")
 
