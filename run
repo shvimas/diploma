@@ -1,1 +1,1 @@
-docker run -d --name=diploma-worker -v ~/diploma/diploma/params:/diploma/params diploma-worker
+docker run -d --name=diploma-worker -v ./params:/diploma/params diploma-worker
