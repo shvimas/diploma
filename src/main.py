@@ -37,6 +37,8 @@ def optimize_heston(info: list,
     strikes_call, strikes_put, prices_call, prices_put = \
         remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
+    print("Optimizing Heston with " + metric + " on day " + str(day))
+
     with open("params/Heston_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
         model = "heston"
@@ -83,6 +85,8 @@ def optimize_vg(info: list,
 
     strikes_call, strikes_put, prices_call, prices_put = \
         remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
+
+    print("Optimizing VG with " + metric + " on day " + str(day))
 
     with open("params/VG_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
@@ -171,19 +175,21 @@ def main():
     # print(price_heston(pars_heston, args) / actual)
     '''
     metric = "RMR"
-    heston_best = open("params/best4heston_" + metric + ".txt")
-    vg_best = open("params/best4vg_" + metric + ".txt")
+    heston_best = open("params/best4heston_" + metric + ".txt", "w")
+    vg_best = open("params/best4vg_" + metric + ".txt", "w")
 
     for day in range(0, len(info)):
         p1 = optimize_heston(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
                              prices_call=prices_call, prices_put=prices_put,
                              metric=metric, day=day, is_call=True, log2console=log2console)
         heston_best.write("Day " + str(day) + ": " + str(p1.x) + "\n")
+        heston_best.flush()
 
         p2 = optimize_vg(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
                          prices_call=prices_call, prices_put=prices_put,
                          metric=metric, day=day, is_call=True, log2console=log2console)
         vg_best.write("Day " + str(day) + ": " + str(p2.x) + "\n")
+        vg_best.flush()
 
 
 if __name__ == "__main__":
