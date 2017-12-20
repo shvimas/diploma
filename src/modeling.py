@@ -79,7 +79,7 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple,
                             local=False)
         pars2 = result.x
 
-        with open("params/" + model1 + "_" + model2 + "_" + metric + ".txt", "a") as out:
+        with open("../params/" + model1 + "_" + model2 + "_" + metric + ".txt", "a") as out:
             out.write(array2str(pars1) + " --> " + array2str(pars2) +
                       " with quality metric " + metric + ": " + str(result.fun) + "\n")
 

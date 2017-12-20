@@ -36,7 +36,7 @@ def optimize_heston(info: list,
     strikes_call, strikes_put, prices_call, prices_put = \
         remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
-    with open("params/Heston_" + metric + "_good_params.txt", "a") as good:
+    with open("../params/Heston_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
         model = "heston"
         actual = prices_call[day]
@@ -86,7 +86,7 @@ def optimize_vg(info: list,
                                                                             prices_put,
                                                                             info)
 
-    with open("params/VG_" + metric + "_good_params.txt", "a") as good:
+    with open("../params/VG_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
         model = "vg"
         actual = prices_call[day]
