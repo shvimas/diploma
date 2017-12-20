@@ -8,19 +8,28 @@ def mean(seq):
     return sum(seq) / len(seq)
 
 
-def mean_ratio(predicted, actual):
+def mean_ratio(predicted, actual) -> float:
     tmp = list(map(
         lambda x: (x >= 1) * x + (x < 1) / x,
-        predicted / actual
-    ))
+        predicted / actual))
 
     return mean(tmp)
+
+
+def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
+    tmp = list(map(
+            lambda x: (x >= 1) * x + (x < 1) / x,
+            predicted / actual))
+    n = len(tmp)
+    p = n - int(n * alpha)
+    return mean(sorted(tmp)[:p])
 
 
 models = modeling.models  # dummy solution; w/o this cyclic imports ruin the thing
 metrics = {
         "MAE": mean_absolute_error,
-        "mean ratio": mean_ratio
+        "mean ratio": mean_ratio,
+        "RMR": robust_mean_ratio
     }
 
 
@@ -31,7 +40,8 @@ def apply_metric(predicted, actual, metric="MAE") -> float:
 def is_good_enough(quality: float, metric: str) -> bool:
     values = {
         "MAE": 2,
-        "mean ratio": 1.05
+        "mean ratio": 1.05,
+        "RMR": 1.04
     }
 
     return quality < values[metric]

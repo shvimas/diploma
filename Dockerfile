@@ -10,4 +10,4 @@ COPY src ./src
 COPY SPH2_031612.csv .
 COPY requirements.txt .
 
-CMD python src/main.py
+CMD python -u src/main.py

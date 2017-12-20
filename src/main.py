@@ -32,7 +32,8 @@ def optimize_heston(info: list,
                     strikes_call: list, strikes_put: list,
                     prices_call: list, prices_put: list,
                     metric: str, day: int, is_call: bool,
-                    log2console=False):
+                    log2console=False) -> opt.OptimizeResult:
+
     strikes_call, strikes_put, prices_call, prices_put = \
         remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
@@ -78,13 +79,10 @@ def optimize_vg(info: list,
                 strikes_call: list, strikes_put: list,
                 prices_call: list, prices_put: list,
                 metric: str, day: int, is_call: bool,
-                log2console=False):
+                log2console=False) -> opt.OptimizeResult:
 
-    strikes_call, strikes_put, prices_call, prices_put = remove_itm_options(strikes_call,
-                                                                            strikes_put,
-                                                                            prices_call,
-                                                                            prices_put,
-                                                                            info)
+    strikes_call, strikes_put, prices_call, prices_put = \
+        remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
     with open("params/VG_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
@@ -147,7 +145,7 @@ def main():
                       q=1.,
                       call=True)
 
-    #tune_on_near_params(model1="vg", model2="heston",
+    # tune_on_near_params(model1="vg", model2="heston",
     #                    args=market, center=pars_vg, metric="mean ratio")
 
     # for logging in console
@@ -161,6 +159,7 @@ def main():
     is_call = True
     args = (spot, strikes, maturity, rate, q, is_call)
     actual_call = prices_call[day]
+    '''
 
     tmp_heston = price_heston(pars_heston, args)
 
@@ -170,28 +169,22 @@ def main():
 
     print(tmp_vg / actual_call)
     # print(price_heston(pars_heston, args) / actual)
+    '''
+    metric = "RMR"
+    heston_best = open("params/best4heston_" + metric + ".txt")
+    vg_best = open("params/best4vg_" + metric + ".txt")
 
     for day in range(0, len(info)):
-        optimize_heston(info, strikes_call, strikes_put, prices_call, prices_put,
-                        "MAE", day, True, log2console)
-        optimize_vg(info, strikes_call, strikes_put, prices_call, prices_put,
-                    "mean ratio", day, True, log2console)
+        p1 = optimize_heston(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
+                             prices_call=prices_call, prices_put=prices_put,
+                             metric=metric, day=day, is_call=True, log2console=log2console)
+        heston_best.write("Day " + str(day) + ": " + str(p1.x) + "\n")
+
+        p2 = optimize_vg(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
+                         prices_call=prices_call, prices_put=prices_put,
+                         metric=metric, day=day, is_call=True, log2console=log2console)
+        vg_best.write("Day " + str(day) + ": " + str(p2.x) + "\n")
 
 
 if __name__ == "__main__":
-    '''
-    import VG_Pricing_Integral_vectorized
-    a = VG_Pricing_Integral_vectorized.cf_vg(1, 2, 3, 4, 5, .1, -.1, .05)
-    
-    pars_heston = (5., 1., .5, .5, .2)
-    pars_vg = (.1, -.1, .15)
-    price_heston = price_heston(pars_heston, args_heston)
-    price_vg = price_vg(pars_vg, args_vg)
-    
-    from Log_Stable_Pricing import price_ls
-    pars_ls = (1.5, .05, -.05)
-    args = (100, np.array([110, 120]), 1.2, .01, .01, True)
-    print(price_ls(pars=pars_ls, args=args))
-    '''
-
     main()
