@@ -8,5 +8,6 @@ RUN pip install -r requirements.txt
 
 COPY src ./src
 COPY SPH2_031612.csv .
+COPY requirements.txt .
 
 CMD python main.py > log.txt 2>&1
