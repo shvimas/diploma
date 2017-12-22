@@ -140,7 +140,7 @@ def main():
     # pars_vg = (0.996575637472, -0.142224286732, 0.0954970105615)
     pars_vg = (0.999728271222, -0.124716144066, 0.109217167741)
 
-    day = 0
+    day = 50
 
     market = EvalArgs(spot=info[day].spot,
                       k=strikes_call[day],
@@ -163,6 +163,9 @@ def main():
     is_call = True
     args = (spot, strikes, maturity, rate, q, is_call)
     actual_call = prices_call[day]
+
+    import rate
+    rate.find_opt_rate(args=EvalArgs.from_tuple(args), actual=actual_call)
     '''
 
     tmp_heston = price_heston(pars_heston, args)
