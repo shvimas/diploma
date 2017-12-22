@@ -140,7 +140,7 @@ def main():
     # pars_vg = (0.996575637472, -0.142224286732, 0.0954970105615)
     pars_vg = (0.999728271222, -0.124716144066, 0.109217167741)
 
-    day = 10
+    day = 0
 
     market = EvalArgs(spot=info[day].spot,
                       k=strikes_call[day],
@@ -182,13 +182,13 @@ def main():
         p1 = optimize_heston(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
                              prices_call=prices_call, prices_put=prices_put,
                              metric=metric, day=day, is_call=True, log2console=log2console)
-        heston_best.write("Day " + str(day) + ": " + str(p1.x) + "\n")
+        heston_best.write("Day " + str(day) + " with " + str(p1.fun) + ": " + array2str(p1.x) + "\n")
         heston_best.flush()
 
         p2 = optimize_vg(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
                          prices_call=prices_call, prices_put=prices_put,
                          metric=metric, day=day, is_call=True, log2console=log2console)
-        vg_best.write("Day " + str(day) + ": " + str(p2.x) + "\n")
+        vg_best.write("Day " + str(day) + " with " + str(p2.fun) + ": " + array2str(p2.x) + "\n")
         vg_best.flush()
 
 
