@@ -164,9 +164,10 @@ def main():
     args = (spot, strikes, maturity, rate, q, is_call)
     actual_call = prices_call[day]
 
+    '''
     import rate
     rate.find_opt_rate(args=EvalArgs.from_tuple(args), actual=actual_call)
-    '''
+    
 
     tmp_heston = price_heston(pars_heston, args)
 
