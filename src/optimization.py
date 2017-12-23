@@ -1,11 +1,14 @@
 import numpy as np
-from sklearn.metrics import mean_absolute_error
 import modeling
 from eval_args import EvalArgs
 
 
 def mean(seq):
     return sum(seq) / len(seq)
+
+
+def mean_absolute_error(predicted, actual) -> float:
+    return mean(abs(predicted - actual))
 
 
 def mean_ratio(predicted, actual) -> float:

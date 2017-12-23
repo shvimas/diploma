@@ -9,7 +9,7 @@ from modeling import par_bounds
 def find_opt_rate(args: EvalArgs, actual: np.ndarray) -> float:
     best_rate = 0
     best_fun = 1000
-    out = open("opt_rate.txt", "w")
+    out = open("params/opt_rate.txt", "w")
     for rate in [i * .0001 for i in range(1, 35)]:
         args.r = rate
         res = differential_evolution(
