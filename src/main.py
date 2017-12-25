@@ -1,5 +1,5 @@
 from data_helpers import read_data, array2str
-from optimization import estimate_model, is_good_enough
+from optimization import estimate_model, is_good_enough, metrics
 from Heston_Pricing_Integral_vectorized import price_heston
 from VG_Pricing_Integral_vectorized import price_vg
 import numpy as np
@@ -145,8 +145,8 @@ def main():
     market = EvalArgs(spot=info[day].spot,
                       k=strikes_call[day],
                       tau=info[day].mat,
-                      r=1.,
-                      q=1.,
+                      r=.01,
+                      q=.01,
                       call=True)
 
     # tune_on_near_params(model1="vg", model2="heston",
@@ -163,6 +163,20 @@ def main():
     is_call = True
     args = (spot, strikes, maturity, rate, q, is_call)
     actual_call = prices_call[day]
+
+    def f(pars, args: tuple, prices):
+        r = pars[0]
+        args = EvalArgs.from_tuple(args)
+        args.r = r
+        args.q = r
+        return metrics["RMR"](price_heston(pars=pars[1:], args=args.as_tuple()), prices)
+
+    opt.differential_evolution(
+            func=f,
+            maxiter=2000,
+            bounds=((.005, 2), (.00001, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)),
+            args=(args, actual_call)
+    )
 
     '''
     import rate
