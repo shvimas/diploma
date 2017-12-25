@@ -171,12 +171,16 @@ def main():
         args.q = r
         return metrics["RMR"](price_heston(pars=pars[1:], args=args.as_tuple()), prices)
 
-    opt.differential_evolution(
+    res = opt.differential_evolution(
             func=f,
             maxiter=2000,
             bounds=((.005, 2), (.00001, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)),
             args=(args, actual_call)
     )
+    print(array2str(res.x))
+    print(res.fun)
+    with open("params/best_rate.txt", "w") as out:
+        out.write(array2str(res.x) + " --> " + res.fun + "\n")
 
     '''
     import rate
