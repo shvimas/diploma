@@ -1,7 +1,10 @@
 import cProfile
 from VG_Pricing_Integral_vectorized import price_vg
 from Heston_Pricing_Integral_vectorized import price_heston
+from Log_Stable_Pricing import price_ls
 import numpy as np
+
+num_strikes = 100
 
 
 def profile_heston():
@@ -13,9 +16,9 @@ def profile_heston():
     p = (kappa, theta, sigma, rho, v0)
 
     spot = 100
-    strike = np.array([100 + i * 10 for i in range(10)])
+    strike = np.array([100 + i * 10 for i in range(num_strikes)])
     mat = 1.2
-    rate = 1.
+    rate = .01
     q = rate
     is_call = True
     a = (spot, strike, mat, rate, q, is_call)
@@ -33,9 +36,9 @@ def profile_vg():
     p = (nu, theta, sigma)
 
     spot = 100
-    strike = np.array([100 + i * 10 for i in range(10)])
+    strike = np.array([100 + i * 10 for i in range(num_strikes)])
     mat = 1.2
-    rate = 1.
+    rate = .01
     q = rate
     is_call = True
     a = (spot, strike, mat, rate, q, is_call)
@@ -46,6 +49,27 @@ def profile_vg():
                     sort=1)
 
 
+def profile_ls():
+    sigma = .5
+    alpha = 1.6
+    beta = 1
+    p = (sigma, alpha, beta)
+
+    spot = 100
+    strike = np.array([100 + i * 10 for i in range(num_strikes)])
+    mat = 1.2
+    rate = .01
+    q = rate
+    is_call = True
+    a = (spot, strike, mat, rate, q, is_call)
+
+    cProfile.runctx(statement='price_ls(pars, args)',
+                    globals={},
+                    locals={"pars": p, "args": a, "price_ls": price_ls},
+                    sort=1)
+
+
 if __name__ == "__main__":
     profile_heston()
     profile_vg()
+    profile_ls()

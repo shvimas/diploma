@@ -1,7 +1,6 @@
 from data_helpers import read_data, array2str
 from optimization import estimate_model, is_good_enough, metrics
 from Heston_Pricing_Integral_vectorized import price_heston
-from VG_Pricing_Integral_vectorized import price_vg
 import numpy as np
 import scipy.optimize as opt
 from eval_args import EvalArgs
@@ -33,9 +32,6 @@ def optimize_heston(info: list,
                     prices_call: list, prices_put: list,
                     metric: str, day: int, is_call: bool,
                     log2console=False) -> opt.OptimizeResult:
-
-    strikes_call, strikes_put, prices_call, prices_put = \
-        remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
     print("Optimizing Heston with " + metric + " on day " + str(day))
 
@@ -82,9 +78,6 @@ def optimize_vg(info: list,
                 prices_call: list, prices_put: list,
                 metric: str, day: int, is_call: bool,
                 log2console=False) -> opt.OptimizeResult:
-
-    strikes_call, strikes_put, prices_call, prices_put = \
-        remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
     print("Optimizing VG with " + metric + " on day " + str(day))
 
@@ -136,7 +129,8 @@ def main():
     info, strikes_call, strikes_put, prices_call, prices_put = read_data("SPH2_031612.csv")
 
     # pars_heston = (5.73144671461, 0.00310912079833, 0.200295855838, 0.0131541339298, 0.0295404046434)
-    pars_heston = (0.405, 0.0098, 0.505, 0.00057, 0.04007)
+    # pars_heston = (0.405, 0.0098, 0.505, 0.00057, 0.04007)
+    pars_heston = (4.2216740989, 0.0199176675743, 1.51769128617e-05, 0.0474806534178, 0.000569295223402)
     # pars_vg = (0.996575637472, -0.142224286732, 0.0954970105615)
     pars_vg = (0.999728271222, -0.124716144066, 0.109217167741)
 
@@ -145,9 +139,11 @@ def main():
     market = EvalArgs(spot=info[day].spot,
                       k=strikes_call[day],
                       tau=info[day].mat,
-                      r=.01,
-                      q=.01,
+                      r=.005,
+                      q=.005,
                       call=True)
+
+    print(metrics["RMR"](price_heston(pars=pars_heston, args=market.as_tuple()), prices_call[day]))
 
     # tune_on_near_params(model1="vg", model2="heston",
     #                    args=market, center=pars_vg, metric="mean ratio")
@@ -171,6 +167,8 @@ def main():
         args.q = r
         return metrics["RMR"](price_heston(pars=pars[1:], args=args.as_tuple()), prices)
 
+    print(f(pars=(0.005, *pars_heston), args=market.as_tuple(), prices=prices_call[day]))
+
     res = opt.differential_evolution(
             func=f,
             maxiter=2000,
@@ -180,7 +178,7 @@ def main():
     print(array2str(res.x))
     print(res.fun)
     with open("params/best_rate.txt", "w") as out:
-        out.write(array2str(res.x) + " --> " + res.fun + "\n")
+        out.write(str(array2str(res.x)) + " --> " + str(res.fun) + "\n")
 
     '''
     import rate
@@ -199,6 +197,9 @@ def main():
     metric = "RMR"
     heston_best = open("params/best4heston_" + metric + ".txt", "w")
     vg_best = open("params/best4vg_" + metric + ".txt", "w")
+
+    strikes_call, strikes_put, prices_call, prices_put = \
+        remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
     for day in range(0, len(info)):
         p1 = optimize_heston(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
