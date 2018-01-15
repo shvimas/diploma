@@ -1,13 +1,24 @@
 class Range:
-    def __init__(self, center: float, width: float, num: int):
-        self.min = center - width / 2
-        self.max = center + width / 2
+    def __init__(self, num: int,
+                 center: float = None, width: float = None,
+                 min: float = None, max: float = None):
+        if min is None and max is None:
+            self.min = center - width / 2
+            self.max = center + width / 2
+        elif center is None and width is None:
+            self.min = min
+            self.max = max
+        else:
+            raise Exception("cannot crate Range with such parameters")
         self.num = num
         self.step = (self.max - self.min) / num
 
     def __iter__(self) -> float:
         for val in [self.min + i * self.step for i in range(0, self.num)]:
             yield val
+
+    def __getitem__(self, item):
+        return self.min + item * self.step
 
 
 class ParsRange:
