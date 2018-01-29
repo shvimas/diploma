@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 
 def integrate_simpson(f, a, b):
@@ -11,8 +12,7 @@ def integrate_simpson(f, a, b):
     return result
 
 
-def integrate_simpson_vectorized(f, lower, upper) -> float:
-    n = 5000
+def integrate_simpson_vectorized(f, lower, upper, n=5000) -> float:
     h = (upper - lower) / n
     q = np.arange(0, n + 1)
     ff = f(lower + q * h)
@@ -21,6 +21,16 @@ def integrate_simpson_vectorized(f, lower, upper) -> float:
     w[n] = np.array([1])
     result = h / 3 * np.dot(ff, w)
     return result
+
+
+def integrate_simpson_tensorflow(f, lower, upper, n=5000):
+    h = (upper - lower) / n
+    q = tf.range(start=0, limit=n+1, dtype=tf.float32)
+    f_values = f(lower + q * h)
+    w = 3 + (-1) ** (q + 1)
+    w[0] = 0
+    w[-1] = 0
+    return h / 3 * tf.matmul(f_values, w, transpose_b=True)
 
 
 def pair_max(seq1: np.ndarray, seq2: np.ndarray) -> np.ndarray:

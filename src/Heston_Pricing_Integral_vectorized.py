@@ -40,13 +40,13 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
 
 def heston_put_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
     c0 = heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k)
-    return max([0, c0 + k * exp(-r * t) - s0])
+    return c0 + k * exp(-r * t) - s0
 
 
 def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
     a = s0 * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
     b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
-    return max([0, a - b])
+    return a - b
 
 
 def heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):

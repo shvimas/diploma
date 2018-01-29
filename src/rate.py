@@ -11,7 +11,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
     best_fun = {"heston": 1000, "vg": 1000, "ls": 1000}
     f = open("params/opt_rate.txt", "r+")
     metric = "RMR"
-    step = .001
+    step = .0001
     upper = 1
 
     try:
@@ -22,7 +22,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
         start_from = 1
 
     for rate in [i * step for i in range(start_from, int(upper / step) + 1)]:
-        for model in ["heston", "vg", "ls"]:
+        for model in ("heston", "vg", "ls"):
             args.r = rate
             res = differential_evolution(
                     func=lambda pars: metrics[metric](model_prices(pars=pars, args=args, model=model), actual),
@@ -31,6 +31,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
             )
             if best_fun[model] > res.fun:
                 best_rates[model] = rate
+                best_fun[model] = res.fun
             msg = f"Rate: {rate}, model: {model}, metric: {metric}, res.fun: {res.fun}, best: {best_rates[model]}"
             print(msg)
             f.write(msg + "\n")

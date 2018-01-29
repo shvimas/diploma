@@ -52,8 +52,7 @@ def profile_vg():
 def profile_ls():
     sigma = .5
     alpha = 1.6
-    beta = 1
-    p = (sigma, alpha, beta)
+    p = (sigma, alpha)
 
     spot = 100
     strike = np.array([100 + i * 10 for i in range(num_strikes)])

@@ -5,14 +5,14 @@ import numpy as np
 import scipy.optimize as opt
 from eval_args import EvalArgs
 from pars_range import ParsRange
-import optimization
+from optimization import estimate_model
 from data_helpers import array2str
 
 
 par_bounds = {
     "heston": ((.00001, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)),
     "vg": ((1e-6, 1), (-1, 1), (1e-6, 1)),
-    "ls": ((1e-6, 5), (1.00001, 1.99999), (.2, 5))
+    "ls": ((1.00001, 1.99999), (1e-6, 1))
 }
 
 
@@ -47,9 +47,6 @@ def tune_model(args: EvalArgs,
     :return: optimal parameters
     """
 
-    # dummy solution; w/o this cyclic imports ruin the thing
-    estimate_model = optimization.estimate_model
-
     if local:
         res = opt.minimize(
             fun=lambda pars: estimate_model(pars, args, model, metric, prices),
@@ -66,10 +63,10 @@ def tune_model(args: EvalArgs,
     return res
 
 
-def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple, metric: str):
+def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple, widths: tuple, metric: str):
     bounds2 = par_bounds[model2]
 
-    for pars1 in ParsRange(model=model1, center=center, dots=1000).generate():
+    for pars1 in ParsRange(model=model1, center=center, widths=widths, dots=1000):
         prices = model_prices(pars=pars1, args=args, model=model1)
         result = tune_model(args=args,
                             bounds=bounds2,
@@ -86,4 +83,3 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple,
         print("Estimated for " + ", ".join(list(map(lambda x: str(x), pars1))))
 
     print("Done")
-

@@ -7,10 +7,11 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
     if (len(args)) != 6:
         raise Exception("args should have 6 parameters: s, k, t, r, q, is_call")
 
-    if (len(pars)) != 3:
-        raise Exception("pars should have 3 parameters: sigma, alpha, beta")
+    if (len(pars)) != 2:
+        raise Exception("pars should have 2 parameters: sigma, alpha")
 
-    sigma, alpha, beta = pars
+    alpha, sigma = pars
+    beta = get_beta(sigma=sigma, alpha=alpha)
     s, k, t, r, q, is_call = args
     s = float(s)  # just to be sure
 
@@ -26,6 +27,10 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
         func = ls_put_price
 
     return s * func(strikes=(np.log(k / s)), beta=beta, r=r, d=q, t=t, alpha=alpha, sigma=sigma)
+
+
+def get_beta(sigma: float, alpha: float) -> float:
+    return 1.
 
 
 def ls_log_return_fourier_transf(u: ndarray, r: float, d: float, t: float, sigma: float, alpha: float) -> ndarray:
@@ -60,7 +65,7 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float, s
     for strike in strikes:
         def integrand(v: ndarray): return ls_integrand(v, strike, beta, r, d, t, sigma, alpha)
         res_val = 1 / pi * exp(-beta * strike) * integrate_simpson_vectorized(integrand, 0, a)
-        result = np.append(result, max(0, res_val))
+        result = np.append(result, res_val)
 
     return result
 

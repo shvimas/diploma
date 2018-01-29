@@ -1,6 +1,6 @@
 from scipy import *
 import numpy as np
-from integration import integrate_simpson_vectorized, pair_max
+from integration import integrate_simpson_vectorized
 
 '''
     theta ** 2 + (2 * sigma ** 2) / nu > 0
@@ -33,10 +33,9 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
     )))
 
     if is_call:
-        return pair_max(np.array([0] * len(call_prices)), call_prices)
+        return call_prices
     else:
-        return pair_max(np.array([0]) * len(call_prices),
-                        call_prices + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau))
+        return call_prices + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau)
 
 
 def call_price_vg(nu: float, theta: float, sigma: float, s, k: float, tau, r, q) -> float:

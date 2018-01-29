@@ -1,9 +1,11 @@
 import numpy as np
-import modeling
 from eval_args import EvalArgs
+from VG_Pricing_Integral_vectorized import price_vg
+from Heston_Pricing_Integral_vectorized import price_heston
+from Log_Stable_Pricing import price_ls
 
 
-def mean(seq):
+def mean(seq) -> float:
     return sum(seq) / len(seq)
 
 
@@ -28,7 +30,12 @@ def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
     return mean(sorted(tmp)[:p])
 
 
-models = modeling.models  # dummy solution; w/o this cyclic imports ruin the thing
+models = {
+    "heston": price_heston,
+    "vg": price_vg,
+    "ls": price_ls
+}
+
 metrics = {
         "MAE": mean_absolute_error,
         "mean ratio": mean_ratio,

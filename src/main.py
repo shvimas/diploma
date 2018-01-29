@@ -1,131 +1,93 @@
 from data_helpers import read_data, array2str
 from optimization import estimate_model, is_good_enough, metrics
 from Heston_Pricing_Integral_vectorized import price_heston
-import numpy as np
 import scipy.optimize as opt
 from eval_args import EvalArgs
+from modeling import par_bounds
+from info_struct import Info
+from typing import List
+from math import exp
 
 
-def remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info):
-    for i in range(len(info)):
-        spot = info[i].spot
-        calls_to_remove = [strike > spot for strike in strikes_call[i]]
-        puts_to_remove = [strike < spot for strike in strikes_put[i]]
+def remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info: List[Info], rate=.03):
+    for day in range(len(info)):
+        spot = info[day].spot
+        tau = info[day].mat / len(info)
+        otm_call = strikes_call[day] > spot * exp(rate * tau)
+        otm_put = strikes_put[day] < spot
 
-        strikes_call[i] = np.array([strikes_call[i][j]
-                                    for j in range(len(strikes_call[i])) if calls_to_remove[j]])
-
-        prices_call[i] = np.array([prices_call[i][j]
-                                   for j in range(len(prices_call[i])) if calls_to_remove[j]])
-
-        strikes_put[i] = np.array([strikes_put[i][j]
-                                   for j in range(len(strikes_put[i])) if puts_to_remove[j]])
-
-        prices_put[i] = np.array([prices_put[i][j]
-                                  for j in range(len(prices_put[i])) if puts_to_remove[j]])
+        strikes_call[day] = strikes_call[day][otm_call]
+        prices_call[day] = prices_call[day][otm_call]
+        strikes_put[day] = strikes_put[day][otm_put]
+        prices_put[day] = prices_call[day][otm_put]
 
     return strikes_call, strikes_put, prices_call, prices_put
 
 
-def optimize_heston(info: list,
-                    strikes_call: list, strikes_put: list,
-                    prices_call: list, prices_put: list,
-                    metric: str, day: int, is_call: bool,
-                    log2console=False) -> opt.OptimizeResult:
+def cut_tails(strikes_call, strikes_put, prices_call, prices_put, info, min_perc=.01, min_price=10):
+    for day in range(len(info)):
+        spot = info[day].spot
+        good_calls = prices_call[day] > min_price and prices_call[day] / spot > min_perc
+        good_puts = prices_put[day] > min_price and prices_put[day] / spot > min_perc
+        strikes_call[day] = strikes_call[day][good_calls]
+        prices_call[day] = prices_call[day][good_calls]
+        strikes_put[day] = strikes_put[day][good_puts]
+        prices_put[day] = prices_put[day][good_puts]
 
-    print("Optimizing Heston with " + metric + " on day " + str(day))
+    return strikes_call, strikes_put, prices_call, prices_put
 
-    with open("params/Heston_" + metric + "_good_params.txt", "a") as good:
+
+def opt_func(pars, *args) -> float:
+    if len(args) != 6:
+        raise ValueError("args must have exactly 6 items")
+    out = args[0]
+    log2console = args[1]
+    model = args[2]
+    metric = args[3]
+    actual = args[4]
+    quality = estimate_model(pars, EvalArgs.from_tuple(args[5]), model, metric, actual)
+
+    msg = metric + ": " + str(quality) + " with params: " + array2str(pars)
+    if log2console:
+        print(msg)
+
+    if is_good_enough(quality, metric):
+        out.write(msg + "\n")
+
+    return quality
+
+
+def optimize_model(model: str, info: list,
+                   strikes_call: list, strikes_put: list,
+                   prices_call: list, prices_put: list,
+                   metric: str, day: int, is_call: bool, rate: float,
+                   log2console=False, disp=False) -> opt.OptimizeResult:
+
+    print(f"Optimizing {model} with " + metric + " on day " + str(day))
+
+    with open(f"params/{model}_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
-        model = "heston"
-        actual = prices_call[day]
+        if is_call:
+            strikes = strikes_call[day]
+            actual = prices_call[day]
+        else:
+            strikes = strikes_put[day]
+            actual = prices_put[day]
 
-        def opt_func4heston(pars, *args) -> float:
-            quality = estimate_model(pars, EvalArgs.from_tuple(args), model, metric, actual)
-
-            msg = metric + ": " + str(quality) + " with params: " + array2str(pars)
-            if log2console:
-                print(msg)
-
-            if is_good_enough(quality, metric):
-                good.write(msg + "\n")
-
-            return quality
-
-        rate = .01
         q = rate
         maturity = info[day].mat / len(info)
         spot = info[day].spot
-        args_heston = (spot, strikes_call[day], maturity, rate, q, is_call)
-        bounds = [(4, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)]
+        args = (good, log2console, model, metric, actual, (spot, strikes, maturity, rate, q, is_call))
+        bounds = par_bounds[model]
 
-        best_pars_heston_1 = opt.differential_evolution(
-            func=opt_func4heston, bounds=bounds, disp=True,
-            args=args_heston)
+        best_pars = opt.differential_evolution(func=opt_func, bounds=bounds, disp=disp, args=args)
 
-        '''
-        best_pars_heston_2 = opt.basinhopping(
-            func=opt_func4heston,
-            x0=np.array([2., 0.01, 0.47, 0.15, 0.05]),
-            niter=100,
-            minimizer_kwargs={"args": args_heston, "method": "L-BFGS-B", "bounds": bounds})
-        '''
-    return best_pars_heston_1
+    return best_pars
 
 
-def optimize_vg(info: list,
-                strikes_call: list, strikes_put: list,
-                prices_call: list, prices_put: list,
-                metric: str, day: int, is_call: bool,
-                log2console=False) -> opt.OptimizeResult:
-
-    print("Optimizing VG with " + metric + " on day " + str(day))
-
-    with open("params/VG_" + metric + "_good_params.txt", "a") as good:
-        good.write("Day: " + str(day) + "\n")
-        model = "vg"
-        actual = prices_call[day]
-
-        def opt_func4vg(pars, *args) -> float:
-            quality = estimate_model(pars, EvalArgs.from_tuple(args), model, metric, actual)
-            msg = metric + ": " + str(quality) + " with params: " + array2str(pars)
-            if log2console:
-                print(msg)
-
-            if is_good_enough(quality, metric):
-                good.write(msg + "\n")
-
-            return quality
-
-        rate: float = .01
-        q = rate
-        maturity = info[day].mat / len(info)
-        spot = info[day].spot
-        args_vg = (spot, strikes_call[day], maturity, rate, q, is_call)
-        bounds = ((1e-6, 1), (-1, 1), (1e-6, 1))
-
-        '''
-        # 1.1364, 0.3336, 0,4045
-        glob_min_vg = opt.brute(
-            func=opt_func4vg,
-            ranges=bounds,
-            Ns=10,
-            full_output=True,
-            args_vg=args_vg
-        )
-        '''
-
-        # 0.832095342084, -0.18049796636, 0.0318029588701
-        best_pars_vg: opt.OptimizeResult = opt.differential_evolution(
-            func=opt_func4vg,
-            bounds=bounds,
-            args=args_vg
-        )
-
-    return best_pars_vg
-
-
+# noinspection PyMissingTypeHints
 def main():
+
     info, strikes_call, strikes_put, prices_call, prices_put = read_data("SPH2_031612.csv")
 
     # pars_heston = (5.73144671461, 0.00310912079833, 0.200295855838, 0.0131541339298, 0.0295404046434)
@@ -136,83 +98,28 @@ def main():
 
     day = 50
 
-    market = EvalArgs(spot=info[day].spot,
-                      k=strikes_call[day],
-                      tau=info[day].mat,
-                      r=.005,
-                      q=.005,
-                      call=True)
+    market = EvalArgs(spot=info[day].spot, k=strikes_call[day], tau=info[day].mat, r=.03, q=.03, call=True)
 
     print(metrics["RMR"](price_heston(pars=pars_heston, args=market.as_tuple()), prices_call[day]))
 
-    # tune_on_near_params(model1="vg", model2="heston",
-    #                    args=market, center=pars_vg, metric="mean ratio")
+    # tune_on_near_params(model1="vg", model2="heston", args=market, center=pars_vg, metric="mean ratio")
 
-    # for logging in console
-    log2console = False
-
-    rate = .01
-    q = rate
-    maturity = info[day].mat / len(info)
-    spot = info[day].spot
-    strikes = strikes_call[day]
-    is_call = True
-    args = (spot, strikes, maturity, rate, q, is_call)
-    actual_call = prices_call[day]
-
-    def f(pars, args: tuple, prices):
-        r = pars[0]
-        args = EvalArgs.from_tuple(args)
-        args.r = r
-        args.q = r
-        return metrics["RMR"](price_heston(pars=pars[1:], args=args.as_tuple()), prices)
-
-    print(f(pars=(0.005, *pars_heston), args=market.as_tuple(), prices=prices_call[day]))
-
-    res = opt.differential_evolution(
-            func=f,
-            maxiter=2000,
-            bounds=((.005, 2), (.00001, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)),
-            args=(args, actual_call)
-    )
-    print(array2str(res.x))
-    print(res.fun)
-    with open("params/best_rate.txt", "w") as out:
-        out.write(str(array2str(res.x)) + " --> " + str(res.fun) + "\n")
-
-    '''
-    import rate
-    rate.find_opt_rate(args=EvalArgs.from_tuple(args), actual=actual_call)
-    
-
-    tmp_heston = price_heston(pars_heston, args)
-
-    print(tmp_heston / actual_call)
-
-    tmp_vg = price_vg(pars_vg, args)
-
-    print(tmp_vg / actual_call)
-    # print(price_heston(pars_heston, args) / actual)
-    '''
+    log2console = False  # for logging in console
     metric = "RMR"
     heston_best = open("params/best4heston_" + metric + ".txt", "w")
     vg_best = open("params/best4vg_" + metric + ".txt", "w")
+    ls_best = open("params/best4ls_" + metric + ".txt", "w")
 
     strikes_call, strikes_put, prices_call, prices_put = \
         remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info)
 
     for day in range(0, len(info)):
-        p1 = optimize_heston(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
-                             prices_call=prices_call, prices_put=prices_put,
-                             metric=metric, day=day, is_call=True, log2console=log2console)
-        heston_best.write("Day " + str(day) + " with " + str(p1.fun) + ": " + array2str(p1.x) + "\n")
-        heston_best.flush()
-
-        p2 = optimize_vg(info=info, strikes_call=strikes_call, strikes_put=strikes_put,
-                         prices_call=prices_call, prices_put=prices_put,
-                         metric=metric, day=day, is_call=True, log2console=log2console)
-        vg_best.write("Day " + str(day) + " with " + str(p2.fun) + ": " + array2str(p2.x) + "\n")
-        vg_best.flush()
+        for model_name, file in [("heston", heston_best), ("vg", vg_best), ("ls", ls_best)]:
+            p1 = optimize_model(model=model_name, info=info, strikes_call=strikes_call, strikes_put=strikes_put,
+                                prices_call=prices_call, prices_put=prices_put,
+                                metric=metric, day=day, rate=.03, is_call=True, log2console=log2console)
+            file.write("Day " + str(day) + " with func value" + str(p1.fun) + ": " + array2str(p1.x) + "\n")
+            file.flush()
 
 
 if __name__ == "__main__":
