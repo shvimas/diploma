@@ -4,12 +4,17 @@ from eval_args import EvalArgs
 import numpy as np
 from modeling import par_bounds, model_prices
 import re
+from data_helpers import array2str
 
 
 def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
     best_rates = {"heston": 0, "vg": 0, "ls": 0}
     best_fun = {"heston": 1000, "vg": 1000, "ls": 1000}
-    f = open("params/opt_rate.txt", "r+")
+    if args.is_call:
+        postfix = "call"
+    else:
+        postfix = "put"
+    f = open(f"params/opt_rate_{postfix}.txt", "r+")
     metric = "RMR"
     step = .0001
     upper = 1
@@ -32,7 +37,8 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
             if best_fun[model] > res.fun:
                 best_rates[model] = rate
                 best_fun[model] = res.fun
-            msg = f"Rate: {rate}, model: {model}, metric: {metric}, res.fun: {res.fun}, best: {best_rates[model]}"
+            msg = f"Rate: {rate}, model: {model}, metric: {metric}, pars: {array2str(res.x)}, " \
+                  f"res.fun: {res.fun}, best: {best_rates[model]}"
             print(msg)
             f.write(msg + "\n")
             f.flush()
