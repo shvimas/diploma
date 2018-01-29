@@ -19,7 +19,7 @@ def remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info:
         strikes_call[day] = strikes_call[day][otm_call]
         prices_call[day] = prices_call[day][otm_call]
         strikes_put[day] = strikes_put[day][otm_put]
-        prices_put[day] = prices_call[day][otm_put]
+        prices_put[day] = prices_put[day][otm_put]
 
     return strikes_call, strikes_put, prices_call, prices_put
 
@@ -99,6 +99,12 @@ def main():
     day = 50
 
     market = EvalArgs(spot=info[day].spot, k=strikes_call[day], tau=info[day].mat, r=.03, q=.03, call=True)
+
+    from rate import find_opt_rates
+    find_opt_rates(args=market, actual=prices_call[day])
+    market.is_call = False
+    find_opt_rates(args=market, actual=prices_put[day])
+    market.is_call = True
 
     print(metrics["RMR"](price_heston(pars=pars_heston, args=market.as_tuple()), prices_call[day]))
 

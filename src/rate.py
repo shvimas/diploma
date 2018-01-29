@@ -14,7 +14,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
         postfix = "call"
     else:
         postfix = "put"
-    f = open(f"params/opt_rate_{postfix}.txt", "r+")
+    f = open(f"params/opt_rate_{postfix}.txt", "a+")
     metric = "RMR"
     step = .0001
     upper = 1
