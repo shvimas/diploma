@@ -15,7 +15,7 @@ def mean_absolute_error(predicted, actual) -> float:
 
 def mean_ratio(predicted, actual) -> float:
     tmp = list(map(
-        lambda x: (x >= 1) * x + (x < 1) / x,
+        lambda x: abs((x >= 1) * x + (x < 1) / x),
         predicted / actual))
 
     return mean(tmp)
@@ -23,7 +23,7 @@ def mean_ratio(predicted, actual) -> float:
 
 def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
     tmp = list(map(
-            lambda x: (x >= 1) * x + (x < 1) / x,
+            lambda x: abs((x >= 1) * x + (x < 1) / x),
             predicted / actual))
     n = len(tmp)
     p = n - int(n * alpha)
