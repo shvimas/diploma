@@ -8,18 +8,16 @@ from pars_range import ParsRange
 from optimization import estimate_model
 from data_helpers import array2str
 
-
 par_bounds = {
     "heston": ((.00001, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)),
-    "vg": ((1e-6, 1), (-1, 1), (1e-6, 1)),
-    "ls": ((1.00001, 1.99999), (1e-6, 1))
+    "vg":     ((1e-6, 1), (-1, 1), (1e-6, 1)),
+    "ls":     ((1.00001, 1.99999), (1e-6, 2))
 }
-
 
 models = {
     "heston": price_heston,
-    "vg": price_vg,
-    "ls": price_ls
+    "vg":     price_vg,
+    "ls":     price_ls
 }
 
 
@@ -49,24 +47,25 @@ def tune_model(args: EvalArgs,
 
     if local:
         res = opt.minimize(
-            fun=lambda pars: estimate_model(pars, args, model, metric, prices),
-            bounds=bounds,
-            **kwargs
+                fun=lambda pars: estimate_model(pars, args, model, metric, prices),
+                bounds=bounds,
+                **kwargs
         )
     else:
         res = opt.differential_evolution(
-            func=lambda pars: estimate_model(pars, args, model, metric, prices),
-            bounds=bounds,
-            **kwargs
+                func=lambda pars: estimate_model(pars, args, model, metric, prices),
+                bounds=bounds,
+                **kwargs
         )
 
     return res
 
 
-def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple, widths: tuple, metric: str):
+def tune_on_near_params(model1: str, model2: str, args: EvalArgs, metric: str,
+                        center: tuple, widths: tuple, dots: int):
     bounds2 = par_bounds[model2]
 
-    for pars1 in ParsRange(model=model1, center=center, widths=widths, dots=1000):
+    for pars1 in ParsRange(model=model1, center=center, widths=widths, dots=dots):
         prices = model_prices(pars=pars1, args=args, model=model1)
         result = tune_model(args=args,
                             bounds=bounds2,
@@ -80,6 +79,6 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, center: tuple,
             out.write(array2str(pars1) + " --> " + array2str(pars2) +
                       " with quality metric " + metric + ": " + str(result.fun) + "\n")
 
-        print("Estimated for " + ", ".join(list(map(lambda x: str(x), pars1))))
+        print(f"Estimated for {array2str(pars1)}")
 
     print("Done")

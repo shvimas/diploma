@@ -6,3 +6,9 @@ class Info:
         self.mat = int(mat)
         self.spot = float(spot)
         self.rate = float(rate)
+
+
+class Data:
+    def __init__(self, scall, sput, pcall, pput):
+        self.prices = {True: pcall, False: pput}
+        self.strikes = {True: scall, False: sput}

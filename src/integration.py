@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+# import tensorflow as tf
 
 
 def integrate_simpson(f, a, b):
@@ -23,6 +23,7 @@ def integrate_simpson_vectorized(f, lower, upper, n=5000) -> float:
     return result
 
 
+'''
 def integrate_simpson_tensorflow(f, lower, upper, n=5000):
     h = (upper - lower) / n
     q = tf.range(start=0, limit=n+1, dtype=tf.float32)
@@ -31,6 +32,7 @@ def integrate_simpson_tensorflow(f, lower, upper, n=5000):
     w[0] = 0
     w[-1] = 0
     return h / 3 * tf.matmul(f_values, w, transpose_b=True)
+'''
 
 
 def pair_max(seq1: np.ndarray, seq2: np.ndarray) -> np.ndarray:
@@ -38,6 +40,5 @@ def pair_max(seq1: np.ndarray, seq2: np.ndarray) -> np.ndarray:
         raise Exception("sequences must have the same length")
 
     return np.array(list(map(
-        lambda i: max(seq1[i], seq2[i]),
-        range(len(seq1))
-    )))
+            lambda i: max(seq1[i], seq2[i]),
+            range(len(seq1)))))

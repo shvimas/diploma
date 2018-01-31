@@ -25,12 +25,11 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
 
     # natural constraint
     if theta ** 2 + (2 * sigma ** 2) / nu < 0:
-        return np.array([Inf] * len(k))
+        return np.array([np.Inf] * len(k))
 
     call_prices = np.array(list(map(
         lambda i: call_price_vg(s=s, k=k[i], tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        range(len(k))
-    )))
+        range(len(k)))))
 
     if is_call:
         return call_prices
