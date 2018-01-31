@@ -1,6 +1,8 @@
 from scipy import *
 import numpy as np
 from integration import integrate_simpson_vectorized
+import warnings as wr
+from config import inf_price
 
 '''
     theta ** 2 + (2 * sigma ** 2) / nu > 0
@@ -27,9 +29,13 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
     if theta ** 2 + (2 * sigma ** 2) / nu < 0:
         return np.array([np.Inf] * len(k))
 
-    call_prices = np.array(list(map(
-        lambda i: call_price_vg(s=s, k=k[i], tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        range(len(k)))))
+    wr.filterwarnings('error')
+    try:
+        call_prices = np.array(list(map(
+                lambda i: call_price_vg(s=s, k=k[i], tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
+                range(len(k)))))
+    except Warning:
+        call_prices = np.array([inf_price] * len(k))
 
     if is_call:
         return call_prices

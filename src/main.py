@@ -2,11 +2,14 @@ from data_helpers import read_data, array2str
 from optimization import estimate_model, is_good_enough, metrics
 from Heston_Pricing_Integral_vectorized import price_heston
 import scipy.optimize as opt
+import numpy as np
 from modeling import par_bounds
 from structs import Info, Data, EvalArgs
 from typing import List, Tuple
 from math import exp
 from modeling import tune_on_near_params
+from time import time
+from datetime import timedelta
 
 
 def remove_itm_options(data: Data, info: List[Info], rate=.03) -> Tuple[Data, List[Info]]:
@@ -77,9 +80,9 @@ def optimize_model(model: str, info: list, data: Data,
     :return: opt.OptimizeResult
     """
 
-    print(f"Optimizing {model} with " + metric + " on day " + str(day))
+    print(f"Optimizing {model} with {metric} on day {day}")
 
-    with open(f"params/{model}_" + metric + "_good_params.txt", "a") as good:
+    with open(f"params/{model}_{metric}_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
 
         strikes = data.strikes[is_call][day]
@@ -91,7 +94,11 @@ def optimize_model(model: str, info: list, data: Data,
         args = (good, log2console, model, metric, actual, (spot, strikes, maturity, rate, q, is_call))
         bounds = par_bounds[model]
 
+        t0 = time()
         best_pars = opt.differential_evolution(func=opt_func, bounds=bounds, disp=disp, args=args)
+        print(f"Time spent: {str(timedelta(seconds=(time() - t0)))}\n")
+
+        good.write("\n")
 
     return best_pars
 
@@ -145,19 +152,23 @@ def main() -> None:
     vg_best = open(f"params/best4vg_{metric}.txt", "w")
     ls_best = open(f"params/best4ls_{metric}.txt", "w")
 
-    data, info = prepare_data(data=data, info=info)
+    # need to somehow work around with overflows
+    np.seterr(all='warn')
 
-    for day in range(0, len(info)):
-        for model_name, file in [("heston", heston_best), ("vg", vg_best), ("ls", ls_best)]:
-            p1 = optimize_model(model=model_name, info=info, data=data,
-                                metric=metric, day=day, rate=.03,
-                                is_call=True, log2console=log2console)
-            file.write(f"Day {day} with func value {p1.fun}: {array2str(p1.x)}\n")
-            file.flush()
+    try:
+        data, info = prepare_data(data=data, info=info)
 
-    heston_best.close()
-    vg_best.close()
-    ls_best.close()
+        for day in range(0, len(info)):
+            for model_name, file in [("heston", heston_best), ("vg", vg_best), ("ls", ls_best)]:
+                p1 = optimize_model(model=model_name, info=info, data=data,
+                                    metric=metric, day=day, rate=.03,
+                                    is_call=True, log2console=log2console, disp=True)
+                file.write(f"Day {day} with func value {p1.fun}: {array2str(p1.x)}\n")
+                file.flush()
+    finally:
+        heston_best.close()
+        vg_best.close()
+        ls_best.close()
 
 
 if __name__ == "__main__":

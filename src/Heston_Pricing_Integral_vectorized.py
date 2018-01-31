@@ -1,6 +1,8 @@
 from scipy import *
 import numpy as np
 from integration import integrate_simpson_vectorized
+import warnings as wr
+from config import inf_price
 
 '''
     2 * kappa * theta > sigma ** 2
@@ -34,18 +36,22 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
 
     return np.array(list(map(
         lambda i: func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0, r=r, q=q, t=t, s0=s, k=k[i]),
-        range(len(k))))
-    )
+        range(len(k)))))
 
 
 def heston_put_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
     c0 = heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k)
-    return c0 + k * exp(-r * t) - s0
+    return c0 + k * exp(-r * t) - s0 * exp(-q * t)
 
 
 def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
-    a = s0 * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
-    b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
+    wr.filterwarnings('error')
+    try:
+        a = s0 * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
+        b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
+    except Warning:
+        a = inf_price
+        b = 0
     return a - b
 
 

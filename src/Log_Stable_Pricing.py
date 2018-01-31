@@ -1,6 +1,8 @@
 from scipy import *
 import numpy as np
 from integration import integrate_simpson_vectorized
+import warnings as wr
+from config import inf_price
 
 
 def price_ls(pars: tuple, args: tuple) -> ndarray:
@@ -62,10 +64,15 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float, s
     a = 2 * ls_a(beta, r, d, t, sigma, alpha)
     result = np.array([])
 
-    for strike in strikes:
-        def integrand(v: ndarray): return ls_integrand(v, strike, beta, r, d, t, sigma, alpha)
-        res_val = 1 / pi * exp(-beta * strike) * integrate_simpson_vectorized(integrand, 0, a)
-        result = np.append(result, res_val)
+    wr.filterwarnings('error')
+    try:
+        for strike in strikes:
+            def integrand(v: ndarray): return ls_integrand(v, strike, beta, r, d, t, sigma, alpha)
+
+            res_val = 1 / pi * exp(-beta * strike) * integrate_simpson_vectorized(integrand, 0, a)
+            result = np.append(result, res_val)
+    except Warning:
+        result = np.array([inf_price] * len(strikes))
 
     return result
 
