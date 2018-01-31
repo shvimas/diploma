@@ -1,5 +1,5 @@
 import numpy as np
-from eval_args import EvalArgs
+from structs import EvalArgs
 from VG_Pricing_Integral_vectorized import price_vg
 from Heston_Pricing_Integral_vectorized import price_heston
 from Log_Stable_Pricing import price_ls
@@ -13,12 +13,14 @@ def mean_absolute_error(predicted, actual) -> float:
     return mean(abs(predicted - actual))
 
 
+'''
 def ratio(predicted: np.ndarray, actual: np.ndarray, max_val=1e10) -> np.ndarray:
     for i in range(len(predicted)):
         if predicted[i] == np.Inf:
             predicted[i] = max_val
     tmp = list(map(lambda x: abs(x) if x >= 1 else abs(1 / x), predicted / actual))
     # finish this
+'''
 
 
 def mean_ratio(predicted, actual) -> float:

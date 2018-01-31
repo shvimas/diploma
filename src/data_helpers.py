@@ -1,6 +1,7 @@
 import csv
-from structs import Info
+from structs import Info, Data
 import numpy as np
+from typing import List, Tuple
 
 
 def func(row: list, val: str) -> int:
@@ -11,7 +12,7 @@ def func(row: list, val: str) -> int:
     return ans
 
 
-def read_data(file):
+def read_data(file) -> Tuple[Data, List[Info]]:
     with open(file, "r") as f:
         reader = csv.reader(f, delimiter=";")
         tmp = [[str(item).replace(",", ".") for item in row] for row in reader]
@@ -32,12 +33,14 @@ def read_data(file):
 
     # convert data from str to usable format
     info = list(map(lambda row: Info(*row), info))
+
     prices_call = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), prices_call))
     prices_put = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), prices_put))
     strikes_call = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), strikes_call))
     strikes_put = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), strikes_put))
+    data = Data(scall=strikes_call, sput=strikes_put, pcall=prices_call, pput=prices_put)
 
-    return info, strikes_call, strikes_put, prices_call, prices_put
+    return data, info
 
 
 def sort_data(file):

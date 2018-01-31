@@ -2,48 +2,43 @@ from data_helpers import read_data, array2str
 from optimization import estimate_model, is_good_enough, metrics
 from Heston_Pricing_Integral_vectorized import price_heston
 import scipy.optimize as opt
-import numpy as np
-from eval_args import EvalArgs
 from modeling import par_bounds
-from structs import Info, Data
-from typing import List
+from structs import Info, Data, EvalArgs
+from typing import List, Tuple
 from math import exp
 from modeling import tune_on_near_params
 
 
-def remove_itm_options(strikes_call, strikes_put, prices_call, prices_put, info: List[Info], rate=.03):
+def remove_itm_options(data: Data, info: List[Info], rate=.03) -> Tuple[Data, List[Info]]:
     for day in range(len(info)):
         spot = info[day].spot
         tau = info[day].mat / len(info)
-        otm_call = strikes_call[day] > spot * exp(rate * tau)
-        otm_put = strikes_put[day] < spot
+        otm_call = data.strikes[True][day] > spot * exp(rate * tau)
+        otm_put = data.strikes[False][day] < spot
 
-        strikes_call[day] = strikes_call[day][otm_call]
-        prices_call[day] = prices_call[day][otm_call]
-        strikes_put[day] = strikes_put[day][otm_put]
-        prices_put[day] = prices_put[day][otm_put]
+        data.strikes[True][day] = data.strikes[True][day][otm_call]
+        data.prices[True][day] = data.prices[True][day][otm_call]
+        data.strikes[False][day] = data.strikes[False][day][otm_put]
+        data.prices[False][day] = data.prices[False][day][otm_put]
 
-    return strikes_call, strikes_put, prices_call, prices_put, info
+    return data, info
 
 
-def cut_tails(strikes_call, strikes_put, prices_call, prices_put, info, min_perc=.01, min_price=10):
+def cut_tails(data: Data, info, min_perc=.01, min_price=10) -> Tuple[Data, List[Info]]:
     for day in range(len(info)):
         spot = info[day].spot
-        good_calls = np.logical_and(prices_call[day] > min_price, prices_call[day] / spot > min_perc)
-        good_puts = np.logical_and(prices_put[day] > min_price, prices_put[day] / spot > min_perc)
-        strikes_call[day] = strikes_call[day][good_calls]
-        prices_call[day] = prices_call[day][good_calls]
-        strikes_put[day] = strikes_put[day][good_puts]
-        prices_put[day] = prices_put[day][good_puts]
+        good_calls = (data.prices[True][day] > min_price) & (data.prices[True][day] / spot > min_perc)
+        good_puts = (data.prices[False][day] > min_price) & (data.prices[False][day] / spot > min_perc)
+        data.strikes[True][day] = data.strikes[True][day][good_calls]
+        data.prices[True][day] = data.prices[True][day][good_calls]
+        data.strikes[False][day] = data.strikes[False][day][good_puts]
+        data.prices[False][day] = data.prices[False][day][good_puts]
 
-    return strikes_call, strikes_put, prices_call, prices_put, info
+    return data, info
 
 
-def prepare_data(info: List[Info], strikes_call: List[np.ndarray], strikes_put: List[np.ndarray],
-                 prices_call: List[np.ndarray], prices_put: List[np.ndarray]):
-    return remove_itm_options(
-            *cut_tails(strikes_call=strikes_call, strikes_put=strikes_put,
-                       prices_call=prices_call, prices_put=prices_put, info=info))
+def prepare_data(data: Data, info: List[Info]) -> Tuple[Data, List[Info]]:
+    return remove_itm_options(*cut_tails(data=data, info=info))
 
 
 def opt_func(pars, *args) -> float:
@@ -66,37 +61,29 @@ def opt_func(pars, *args) -> float:
     return quality
 
 
-def optimize_model(model: str, info: list,
-                   strikes_call: list, strikes_put: list,
-                   prices_call: list, prices_put: list,
+def optimize_model(model: str, info: list, data: Data,
                    metric: str, day: int, is_call: bool, rate: float,
                    log2console, disp=False) -> opt.OptimizeResult:
     """
     :param model:
     :param info:
-    :param strikes_call:
-    :param strikes_put:
-    :param prices_call:
-    :param prices_put:
+    :param data:
     :param metric:
     :param day:
     :param is_call:
     :param rate:
     :param log2console:
     :param disp: display status messages in diff evolution
-    :return:
+    :return: opt.OptimizeResult
     """
 
     print(f"Optimizing {model} with " + metric + " on day " + str(day))
 
     with open(f"params/{model}_" + metric + "_good_params.txt", "a") as good:
         good.write("Day: " + str(day) + "\n")
-        if is_call:
-            strikes = strikes_call[day]
-            actual = prices_call[day]
-        else:
-            strikes = strikes_put[day]
-            actual = prices_put[day]
+
+        strikes = data.strikes[is_call][day]
+        actual = data.prices[is_call][day]
 
         q = rate
         maturity = info[day].mat / len(info)
@@ -110,6 +97,11 @@ def optimize_model(model: str, info: list,
 
 
 def tune_all_models(args: EvalArgs):
+    """
+    :param args:
+    :return:
+    """
+
     '''
     all_models = {"heston", "vg", "ls"}
     for model1 in all_models:
@@ -122,9 +114,8 @@ def tune_all_models(args: EvalArgs):
     tune_on_near_params(model1="vg", model2="ls", args=args, metric="RMR", center=center, widths=widths, dots=100)
 
 
-# noinspection PyMissingTypeHints
-def main():
-    info, strikes_call, strikes_put, prices_call, prices_put = read_data("SPH2_031612.csv")
+def main() -> None:
+    data, info = read_data("SPH2_031612.csv")
 
     # pars_heston = (5.73144671461, 0.00310912079833, 0.200295855838, 0.0131541339298, 0.0295404046434)
     # pars_heston = (0.405, 0.0098, 0.505, 0.00057, 0.04007)
@@ -134,17 +125,17 @@ def main():
 
     day = 0
 
-    market = EvalArgs(spot=info[day].spot, k=strikes_call[day], tau=info[day].mat, r=.03, q=.03, call=True)
+    market = EvalArgs(spot=info[day].spot, k=data.strikes[True][day], tau=info[day].mat, r=.03, q=.03, call=True)
 
     '''
     from rate import find_opt_rates
-    find_opt_rates(args=market, actual=prices_call[day])
+    find_opt_rates(args=market, actual=data.prices[market.is_call][day])
     market.is_call = False
-    find_opt_rates(args=market, actual=prices_put[day])
+    find_opt_rates(args=market, actual=data.prices[market.is_call][day])
     market.is_call = True
     '''
 
-    print(metrics["RMR"](price_heston(pars=pars_heston, args=market.as_tuple()), prices_call[day]))
+    print(metrics["RMR"](price_heston(pars=pars_heston, args=market.as_tuple()), data.prices[market.is_call][day]))
 
     # tune_all_models(market)
 
@@ -154,15 +145,13 @@ def main():
     vg_best = open(f"params/best4vg_{metric}.txt", "w")
     ls_best = open(f"params/best4ls_{metric}.txt", "w")
 
-    strikes_call, strikes_put, prices_call, prices_put, info = \
-        prepare_data(strikes_call=strikes_call, strikes_put=strikes_put,
-                     prices_call=prices_call, prices_put=prices_put, info=info)
+    data, info = prepare_data(data=data, info=info)
 
     for day in range(0, len(info)):
         for model_name, file in [("heston", heston_best), ("vg", vg_best), ("ls", ls_best)]:
-            p1 = optimize_model(model=model_name, info=info, strikes_call=strikes_call, strikes_put=strikes_put,
-                                prices_call=prices_call, prices_put=prices_put,
-                                metric=metric, day=day, rate=.03, is_call=True, log2console=log2console)
+            p1 = optimize_model(model=model_name, info=info, data=data,
+                                metric=metric, day=day, rate=.03,
+                                is_call=True, log2console=log2console)
             file.write(f"Day {day} with func value {p1.fun}: {array2str(p1.x)}\n")
             file.flush()
 

@@ -3,7 +3,7 @@ from Heston_Pricing_Integral_vectorized import price_heston
 from Log_Stable_Pricing import price_ls
 import numpy as np
 import scipy.optimize as opt
-from eval_args import EvalArgs
+from structs import EvalArgs
 from pars_range import ParsRange
 from optimization import estimate_model
 from data_helpers import array2str

@@ -1,6 +1,6 @@
 from scipy.optimize import differential_evolution
 from optimization import metrics
-from eval_args import EvalArgs
+from structs import EvalArgs
 import numpy as np
 from modeling import par_bounds, model_prices
 import re
