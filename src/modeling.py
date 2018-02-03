@@ -25,13 +25,8 @@ def model_prices(pars: tuple, args: EvalArgs, model: str) -> np.ndarray:
     return models[model](pars=pars, args=args.as_tuple())
 
 
-def tune_model(args: EvalArgs,
-               bounds: tuple,
-               model: str,
-               metric: str,
-               prices: np.ndarray,
-               local=False,
-               **kwargs) -> opt.OptimizeResult:
+def tune_model(args: EvalArgs, bounds: tuple, model: str, metric: str, prices: np.ndarray,
+               local=False, **kwargs) -> opt.OptimizeResult:
     """
     Finds best(global or local) parameters for specified model
 
@@ -49,14 +44,12 @@ def tune_model(args: EvalArgs,
         res = opt.minimize(
                 fun=lambda pars: estimate_model(pars, args, model, metric, prices),
                 bounds=bounds,
-                **kwargs
-        )
+                **kwargs)
     else:
         res = opt.differential_evolution(
                 func=lambda pars: estimate_model(pars, args, model, metric, prices),
                 bounds=bounds,
-                **kwargs
-        )
+                **kwargs)
 
     return res
 
@@ -67,12 +60,7 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, metric: str,
 
     for pars1 in ParsRange(model=model1, center=center, widths=widths, dots=dots):
         prices = model_prices(pars=pars1, args=args, model=model1)
-        result = tune_model(args=args,
-                            bounds=bounds2,
-                            metric=metric,
-                            model=model2,
-                            prices=prices,
-                            local=False)
+        result = tune_model(args=args, bounds=bounds2, metric=metric, model=model2, prices=prices, local=False)
         pars2 = result.x
 
         with open("params/" + model1 + "_" + model2 + "_" + metric + ".txt", "a") as out:

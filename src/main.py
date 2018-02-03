@@ -5,43 +5,11 @@ import scipy.optimize as opt
 import numpy as np
 from modeling import par_bounds
 from structs import Info, Data, EvalArgs
-from typing import List, Tuple
-from math import exp
 from modeling import tune_on_near_params
 from time import time
 from datetime import timedelta
-
-
-def remove_itm_options(data: Data, info: List[Info], rate=.03) -> Tuple[Data, List[Info]]:
-    for day in range(len(info)):
-        spot = info[day].spot
-        tau = info[day].mat / len(info)
-        otm_call = data.strikes[True][day] > spot * exp(rate * tau)
-        otm_put = data.strikes[False][day] < spot
-
-        data.strikes[True][day] = data.strikes[True][day][otm_call]
-        data.prices[True][day] = data.prices[True][day][otm_call]
-        data.strikes[False][day] = data.strikes[False][day][otm_put]
-        data.prices[False][day] = data.prices[False][day][otm_put]
-
-    return data, info
-
-
-def cut_tails(data: Data, info, min_perc=.01, min_price=10) -> Tuple[Data, List[Info]]:
-    for day in range(len(info)):
-        spot = info[day].spot
-        good_calls = (data.prices[True][day] > min_price) & (data.prices[True][day] / spot > min_perc)
-        good_puts = (data.prices[False][day] > min_price) & (data.prices[False][day] / spot > min_perc)
-        data.strikes[True][day] = data.strikes[True][day][good_calls]
-        data.prices[True][day] = data.prices[True][day][good_calls]
-        data.strikes[False][day] = data.strikes[False][day][good_puts]
-        data.prices[False][day] = data.prices[False][day][good_puts]
-
-    return data, info
-
-
-def prepare_data(data: Data, info: List[Info]) -> Tuple[Data, List[Info]]:
-    return remove_itm_options(*cut_tails(data=data, info=info))
+from data_helpers import prepare_data
+from typing import List
 
 
 def opt_func(pars, *args) -> float:
@@ -64,7 +32,7 @@ def opt_func(pars, *args) -> float:
     return quality
 
 
-def optimize_model(model: str, info: list, data: Data,
+def optimize_model(model: str, info: List[Info], data: Data,
                    metric: str, day: int, is_call: bool, rate: float,
                    log2console, disp=False) -> opt.OptimizeResult:
     """
