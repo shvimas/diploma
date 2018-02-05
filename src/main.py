@@ -1,15 +1,16 @@
 from data_helpers import read_data, array2str
-from optimization import estimate_model, is_good_enough, metrics
-from Heston_Pricing_Integral_vectorized import price_heston
+from optimization import estimate_model, is_good_enough
 import scipy.optimize as opt
-import numpy as np
 from modeling import par_bounds
 from structs import Info, Data, EvalArgs
 from modeling import tune_on_near_params
 from time import time
 from datetime import timedelta
-from data_helpers import prepare_data
+from data_helpers import prepare_data, extract_centers
 from typing import List
+from sklearn.decomposition import PCA
+from multiprocessing import Pool
+import re
 
 
 def opt_func(pars, *args) -> float:
@@ -64,39 +65,59 @@ def optimize_model(model: str, info: List[Info], data: Data,
 
         t0 = time()
         best_pars = opt.differential_evolution(func=opt_func, bounds=bounds, disp=disp, args=args)
-        print(f"Time spent: {str(timedelta(seconds=(time() - t0)))}\n")
+        print(f"Time spent for {model}, day {day}: {str(timedelta(seconds=(time() - t0)))}\n")
 
         good.write("\n")
 
     return best_pars
 
 
-def tune_all_models(args: EvalArgs):
-    """
-    :param args:
-    :return:
-    """
+def get_filename(model: str, metric: str) -> str:
+    return f"params/best4{model}_{metric}.txt"
 
-    '''
+
+def tune_all_models(args: EvalArgs, metric: str):
+
+    def get_centers(model: str, metric_: str) -> str:
+        return extract_centers(get_filename(model=model, metric=metric_))
+
     all_models = {"heston", "vg", "ls"}
     for model1 in all_models:
         for model2 in all_models - {model1}:
-            pass
-    '''
+            centers1 = get_centers(model=model1, metric_=metric)
+            centers1_2d = PCA(n_components=2).fit_transform(centers1)
+
+
 
     center = (.05, -.15, .04)
     widths = (.01, .03, .01)
     tune_on_near_params(model1="vg", model2="ls", args=args, metric="RMR", center=center, widths=widths, dots=100)
 
 
+def get_last_day(filename: str) -> int:
+    try:
+        with open(filename) as f:
+            return int(re.search(r'Day (.*?)[:\s]', f.readlines()[-1]).group(1))
+    except FileNotFoundError or IndexError:
+        return -1
+
+
+def func(args: tuple):
+    model = args[0]
+    metric = args[1]
+    info = args[2]
+    kwargs = args[3]
+    start = get_last_day(get_filename(model=model, metric=metric))
+    file = open(get_filename(model=model, metric=metric), 'a')
+    for day in range(start + 1, len(info)):
+        p1 = optimize_model(model=model, info=info, metric=metric, day=day, **kwargs)
+        file.write(f"Day {day} with func value {p1.fun}: {array2str(p1.x)}\n")
+        file.flush()
+    file.close()
+
+
 def main() -> None:
     data, info = read_data("SPH2_031612.csv")
-
-    # pars_heston = (5.73144671461, 0.00310912079833, 0.200295855838, 0.0131541339298, 0.0295404046434)
-    # pars_heston = (0.405, 0.0098, 0.505, 0.00057, 0.04007)
-    pars_heston = (4.2216740989, 0.0199176675743, 1.51769128617e-05, 0.0474806534178, 0.000569295223402)
-    # pars_vg = (0.996575637472, -0.142224286732, 0.0954970105615)
-    # pars_vg = (0.999728271222, -0.124716144066, 0.109217167741)
 
     day = 0
 
@@ -110,15 +131,29 @@ def main() -> None:
     market.is_call = True
     '''
 
-    print(metrics["RMR"](price_heston(pars=pars_heston, args=market.as_tuple()), data.prices[market.is_call][day]))
-
-    # tune_all_models(market)
+    # tune_all_models(market, "RMR)
 
     log2console = False
     metric = "RMR"
-    heston_best = open(f"params/best4heston_{metric}.txt", "w")
-    vg_best = open(f"params/best4vg_{metric}.txt", "w")
-    ls_best = open(f"params/best4ls_{metric}.txt", "w")
+
+    data, info = prepare_data(data=data, info=info)
+
+    pool = Pool()
+    models = ('heston', 'vg', 'ls')
+    kwargs = [{
+        'data': data,
+        'rate': .03,
+        'is_call': True,
+        'log2console': log2console,
+        'disp': False
+    }] * len(models)
+    all_args = zip(models, ['RMR'] * len(models), [info] * len(models), kwargs)
+    pool.map(func, all_args)
+
+    '''
+    heston_best = open(get_filename(model='heston', metric=metric), "w")
+    vg_best = open(get_filename(model='vg', metric=metric), "w")
+    ls_best = open(get_filename(model='ls', metric=metric), "w")
 
     # need to somehow work around with overflows
     np.seterr(all='warn')
@@ -137,6 +172,7 @@ def main() -> None:
         heston_best.close()
         vg_best.close()
         ls_best.close()
+    '''
 
 
 if __name__ == "__main__":

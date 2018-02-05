@@ -19,7 +19,7 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
         raise Exception("args should have 6 parameters: s, k, tau, r, q, is_call")
     s, k, tau, r, q, is_call = args
 
-    if type(k) is not np.ndarray:
+    if type(k) is not np.ndarray and type(k) is not np.float64:
         if (type(k) is float) | (type(k) is int):
             k = np.array([float(k)])
         else:

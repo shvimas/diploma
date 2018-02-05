@@ -17,7 +17,7 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
     s, k, t, r, q, is_call = args
     s = float(s)  # just to be sure
 
-    if type(k) is not np.ndarray:
+    if type(k) is not np.ndarray and type(k) is not np.float64:
         if (type(k) is float) | (type(k) is int):
             k = np.array([float(k)])
         else:

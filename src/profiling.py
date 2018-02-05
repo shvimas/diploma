@@ -4,7 +4,7 @@ from Heston_Pricing_Integral_vectorized import price_heston
 from Log_Stable_Pricing import price_ls
 import numpy as np
 
-num_strikes = 100
+num_strikes = 1000
 
 
 def profile_heston():

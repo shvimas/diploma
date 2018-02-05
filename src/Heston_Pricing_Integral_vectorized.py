@@ -19,7 +19,7 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
     kappa, theta, sigma, rho, v0 = pars
     s, k, t, r, q, is_call = args
 
-    if type(k) is not ndarray:
+    if type(k) is not ndarray and type(k) is not np.float64:
         if (type(k) is float) | (type(k) is int):
             k = np.array([float(k)])
         else:

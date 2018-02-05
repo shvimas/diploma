@@ -4,6 +4,7 @@ from math import exp
 from structs import Info, Data
 import numpy as np
 from typing import List, Tuple
+import re
 
 
 def func(row: list, val: str) -> int:
@@ -83,4 +84,16 @@ def cut_tails(data: Data, info, min_perc=.01, min_price=10) -> Tuple[Data, List[
 
 
 def prepare_data(data: Data, info: List[Info]) -> Tuple[Data, List[Info]]:
-    return remove_itm_options(*cut_tails(data=data, info=info))
+    return cut_tails(data=data, info=info)
+
+
+def extract_centers(filename: str):
+    with open(filename) as f:
+        for line in f.readlines():
+            if 'with params' in line:
+                yield tuple(map(lambda x: float(x), (re.search(r'.*with params: (.*)', line).group(1).split(", "))))
+            if 'with func value' in line:
+                yield tuple(map(lambda x: float(x), (re.search(r'.*value .*: (.*)', line).group(1).split(", "))))
+            if 'Day' in line:
+                continue
+            raise ValueError('')

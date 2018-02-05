@@ -1,5 +1,6 @@
 import numpy as np
 # import tensorflow as tf
+import config as cfg
 
 
 def integrate_simpson(f, a, b):
@@ -12,7 +13,7 @@ def integrate_simpson(f, a, b):
     return result
 
 
-def integrate_simpson_vectorized(f, lower, upper, n=5000) -> float:
+def integrate_simpson_vectorized(f, lower, upper, n=cfg.n) -> float:
     h = (upper - lower) / n
     q = np.arange(0, n + 1)
     ff = f(lower + q * h)

@@ -9,7 +9,7 @@ from optimization import estimate_model
 from data_helpers import array2str
 
 par_bounds = {
-    "heston": ((.00001, 6), (.00001, 1), (.00001, 1), (0, 1), (.00001, 1)),
+    "heston": ((1e-6, 10), (1e-7, 1), (1e-7, 2), (0, 1), (1e-10, 1)),
     "vg":     ((1e-6, 1), (-1, 1), (1e-6, 1)),
     "ls":     ((1.00001, 1.99999), (1e-6, 2))
 }

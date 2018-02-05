@@ -3,6 +3,7 @@ from structs import EvalArgs
 from VG_Pricing_Integral_vectorized import price_vg
 from Heston_Pricing_Integral_vectorized import price_heston
 from Log_Stable_Pricing import price_ls
+import config
 
 
 def mean(seq) -> float:
@@ -49,14 +50,17 @@ metrics = {
 
 
 def apply_metric(predicted, actual, metric="MAE") -> float:
-    return metrics[metric](predicted, actual)
+    try:
+        return metrics[metric](predicted, actual)
+    except Warning:
+        return config.inf_metric
 
 
 def is_good_enough(quality: float, metric: str) -> bool:
     values = {
         "MAE":        2,
-        "mean ratio": 1.05,
-        "RMR":        1.04
+        "mean ratio": 1.02,
+        "RMR":        1.02
     }
 
     return quality < values[metric]
