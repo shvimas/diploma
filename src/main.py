@@ -135,7 +135,7 @@ def main() -> None:
     data, info = prepare_data(data=data, info=info)
 
     pool = Pool()
-    models = ('heston', 'vg', 'ls')
+    models = ('heston', )
     kwargs = [{
         'data': data,
         'rate': .03,

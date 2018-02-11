@@ -93,7 +93,7 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float,
         for strike in strikes:
             def integrand(v): return ls_integrand(v, strike, beta, r, d, t, sigma, alpha)
 
-            res_val = 1 / pi * exp(-beta * strike) * quad(integrand, 0, a)
+            res_val = 1 / pi * exp(-beta * strike) * quad(integrand, 0, a)[0]
             result = np.append(result, res_val)
 
     except Warning:

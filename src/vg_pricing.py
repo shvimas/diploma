@@ -46,7 +46,7 @@ def call_price_vg(nu: float, theta: float, sigma: float, s, k: float, tau, r, q)
 
     v_p2 = 0.5 + 1 / pi * integrate_simpson_vectorized(
         f=lambda om: p2_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        lower=1e-14)
+        lower=1e-30)
 
     return exp(-q * tau) * s * v_p1 - exp(-r * tau) * k * v_p2
 

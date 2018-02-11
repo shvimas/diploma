@@ -48,7 +48,7 @@ def heston_put_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
 def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
     wr.filterwarnings('error')
     try:
-        a = s0 * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
+        a = s0 * exp(-q * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
         b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
     except Warning:
         a = inf_price
@@ -59,7 +59,7 @@ def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
 def heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
     integral = integrate_simpson_vectorized(
         lambda phi: int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ),
-        lower=1e-14)
+        lower=1e-30)
     return 0.5 + (1 / pi) * integral
 
 
@@ -68,12 +68,12 @@ def int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
     ans = np.real(np.exp(-1j * np.outer(np.log(k), phi)) *
                   int_function_2(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, typ) / (1j * phi))
 
-    return ans[0]  # no need to store one number as np.array
+    return ans
 
 
 def int_function_2(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, typ):
     if typ == 1:
-        cf = cf_heston(phi - 1j, kappa, theta, sigma, rho, v0, r, q, t, s0) / (s0 * exp(r * t))
+        cf = cf_heston(phi - 1j, kappa, theta, sigma, rho, v0, r, q, t, s0) / (s0 * exp((r - q) * t))
     else:
         cf = cf_heston(phi, kappa, theta, sigma, rho, v0, r, q, t, s0)
     return cf

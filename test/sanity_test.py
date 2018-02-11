@@ -13,6 +13,7 @@ def read_r_data():
 
 def test():
 
+    # noinspection PyShadowingNames
     def prepare_args(a: List[str]) -> tuple:
         spot = float(a[0])
         strike = float(a[1])
@@ -23,13 +24,13 @@ def test():
         return spot, strike, tau, r, q, is_call
 
     def params2tuple(params: tuple) -> tuple:
-        return params + tuple(None for i in range(5 - len(params)))
+        return params + tuple(None for _ in range(5 - len(params)))
 
     cases = read_r_data()
 
     names = ['model', 'p1', 'p2', 'p3', 'p4', 'p5',
              'spot', 'strike', 't', 'r', 'q', 'is call',
-             'R answer', 'Python answer', 'diff', 'is correct']
+             'R answer', 'Python answer', 'diff', 'rel diff', 'is correct']
 
     with open('sanity_log.txt', 'w') as log, open('sanity.csv', 'w') as out:
         out.write('; '.join(names) + "\n")
@@ -67,7 +68,8 @@ def test():
             p1, p2, p3, p4, p5 = params2tuple(params=pars)
             spot, strike, t, r, q, is_call = args
             row = f'{model};{p1};{p2};{p3};{p4};{p5};{spot};{strike};{t};{r};{q};' \
-                  f'{is_call};{answer};{calculated};{diff};{"+" if correct else "-"}\n'
+                  f'{is_call};{answer};{calculated};{diff};' \
+                  f'{diff / answer if answer != 0 else "Inf"};{"+" if correct else "-"}\n'
             out.write(row)
             out.flush()
 
