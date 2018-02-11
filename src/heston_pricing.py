@@ -3,6 +3,7 @@ import numpy as np
 from integration import integrate_simpson_vectorized
 import warnings as wr
 from config import inf_price
+from data_helpers import not_less_than_zero
 
 '''
     2 * kappa * theta > sigma ** 2
@@ -19,15 +20,14 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
     kappa, theta, sigma, rho, v0 = pars
     s, k, t, r, q, is_call = args
 
+    if type(s) is not float and type(s) is not int:
+        raise ValueError(f's must be float or int; passed {type(s)}')
+
     if type(k) is not ndarray and type(k) is not np.float64:
         if (type(k) is float) | (type(k) is int):
             k = np.array([float(k)])
         else:
-            raise Exception("k(strikes) should be either np.array or numeric")
-
-    # natural constraint
-    #if 2 * kappa * theta <= sigma ** 2:
-    #    return np.array([Inf] * len(k))
+            raise ValueError(f"k(strikes) should be either np.array or numeric; passed {type(k)}")
 
     if is_call:
         func = heston_call_value_int
@@ -35,7 +35,8 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
         func = heston_put_value_int
 
     return np.array(list(map(
-        lambda i: func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0, r=r, q=q, t=t, s0=s, k=k[i]),
+        lambda i: not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
+                                          r=r, q=q, t=t, s0=s, k=k[i])),
         range(len(k)))))
 
 
@@ -58,8 +59,7 @@ def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
 def heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
     integral = integrate_simpson_vectorized(
         lambda phi: int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ),
-        lower=1e-14,
-        upper=50)
+        lower=1e-14)
     return 0.5 + (1 / pi) * integral
 
 

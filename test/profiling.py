@@ -1,7 +1,7 @@
 import cProfile
-from VG_Pricing_Integral_vectorized import price_vg
-from Heston_Pricing_Integral_vectorized import price_heston
-from Log_Stable_Pricing import price_ls
+from vg_pricing import price_vg
+from heston_pricing import price_heston
+from ls_pricing import price_ls
 import numpy as np
 
 num_strikes = 1000

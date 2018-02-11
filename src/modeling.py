@@ -1,6 +1,6 @@
-from VG_Pricing_Integral_vectorized import price_vg
-from Heston_Pricing_Integral_vectorized import price_heston
-from Log_Stable_Pricing import price_ls
+from vg_pricing import price_vg
+from heston_pricing import price_heston
+from ls_pricing import price_ls
 import numpy as np
 import scipy.optimize as opt
 from structs import EvalArgs
@@ -10,7 +10,7 @@ from data_helpers import array2str
 
 par_bounds = {
     "heston": ((1e-6, 10), (1e-7, 1), (1e-7, 2), (0, 1), (1e-10, 1)),
-    "vg":     ((1e-6, 1), (-1, 1), (1e-6, 1)),
+    "vg":     ((1e-6, 3), (-1, 1), (1e-6, 1)),
     "ls":     ((1.00001, 1.99999), (1e-6, 2))
 }
 
@@ -63,9 +63,8 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, metric: str,
         result = tune_model(args=args, bounds=bounds2, metric=metric, model=model2, prices=prices, local=False)
         pars2 = result.x
 
-        with open("params/" + model1 + "_" + model2 + "_" + metric + ".txt", "a") as out:
-            out.write(array2str(pars1) + " --> " + array2str(pars2) +
-                      " with quality metric " + metric + ": " + str(result.fun) + "\n")
+        with open(f"params/{model1}_{model2}_{metric}.txt", "a") as out:
+            out.write(f"{array2str(pars1)} --> {array2str(pars2)} with quality metric {metric}: {result.fun}\n")
 
         print(f"Estimated for {array2str(pars1)}")
 

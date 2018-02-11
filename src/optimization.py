@@ -1,8 +1,8 @@
 import numpy as np
 from structs import EvalArgs
-from VG_Pricing_Integral_vectorized import price_vg
-from Heston_Pricing_Integral_vectorized import price_heston
-from Log_Stable_Pricing import price_ls
+from vg_pricing import price_vg
+from heston_pricing import price_heston
+from ls_pricing import price_ls
 import config
 
 
@@ -25,12 +25,12 @@ def ratio(predicted: np.ndarray, actual: np.ndarray, max_val=1e10) -> np.ndarray
 
 
 def mean_ratio(predicted, actual) -> float:
-    tmp = list(map(lambda x: abs(x) if x >= 1 else abs(1 / x), predicted / actual))
+    tmp = list(map(lambda x: abs(x) if abs(x) >= 1 else abs(1 / x), predicted / actual))
     return mean(tmp)
 
 
 def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
-    tmp = list(map(lambda x: abs(x) if x >= 1 else abs(1 / x), predicted / actual))
+    tmp = list(map(lambda x: abs(x) if abs(x) >= 1 else abs(1 / x), predicted / actual))
     n = len(tmp)
     p = n - int(n * alpha)
     return mean(sorted(tmp)[:p])
@@ -45,6 +45,7 @@ models = {
 metrics = {
     "MAE":        mean_absolute_error,
     "mean ratio": mean_ratio,
+    "MAR":        mean_ratio,
     "RMR":        robust_mean_ratio
 }
 

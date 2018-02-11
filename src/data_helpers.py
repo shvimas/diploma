@@ -5,6 +5,7 @@ from structs import Info, Data
 import numpy as np
 from typing import List, Tuple
 import re
+from math import sin, cos
 
 
 def func(row: list, val: str) -> int:
@@ -92,8 +93,65 @@ def extract_centers(filename: str):
         for line in f.readlines():
             if 'with params' in line:
                 yield tuple(map(lambda x: float(x), (re.search(r'.*with params: (.*)', line).group(1).split(", "))))
-            if 'with func value' in line:
+            elif 'with func value' in line:
                 yield tuple(map(lambda x: float(x), (re.search(r'.*value .*: (.*)', line).group(1).split(", "))))
-            if 'Day' in line:
+            elif 'Day' in line or line is '\n':
                 continue
-            raise ValueError('')
+            else:
+                raise ValueError(f'bad line: {line}')
+
+
+try:
+    # noinspection PyUnresolvedReferences,PyPackageRequirements
+    import matplotlib.pyplot as pl
+
+
+    def plot_dots(a: np.ndarray, b: np.ndarray = None, style1: str = 'ro', style2: str = 'bo', dim=2) -> None:
+        if dim == 2:
+            a = a.flatten()
+            if b is not None:
+                b = b.flatten()
+                pl.plot(a[::2], a[1::2], style1, b[::2], b[1::2], style2)
+            else:
+                pl.plot(a[::2], a[1::2], style1)
+        elif dim == 1:
+            if b is not None:
+                pl.plot(range(len(a)), a, style1, range(len(b)), b, style2)
+            else:
+                pl.plot(range(len(a)), a, style1)
+        else:
+            raise ValueError('Only support dim == 1 or 2')
+except ImportError:
+    pass
+
+
+def rotate(a: np.ndarray, alpha: float, center: np.ndarray = None) -> np.ndarray:
+    if center is None:
+        center = np.mean(a, axis=0)
+    rot_vec = np.array([[cos(alpha), -sin(alpha)], [sin(alpha), cos(alpha)]])
+    return (a - center) @ rot_vec + center
+
+
+def get_filename(model: str, metric: str, is_call: bool, best=True, from_dir='params') -> str:
+    return f"{from_dir}/{'best' if best else 'good'}4{model}_{metric}_{'call' if is_call else 'put'}.txt"
+
+
+def restore_data_from_factorized(factorized: np.ndarray, factors: np.ndarray, mean: np.ndarray) -> np.ndarray:
+    return mean + factorized @ factors
+
+
+def pair_max(seq1: np.ndarray, seq2: np.ndarray) -> np.ndarray:
+    if len(seq1) != len(seq2):
+        raise Exception("sequences must have the same length")
+
+    return np.array(list(map(
+            lambda i: max(seq1[i], seq2[i]),
+            range(len(seq1)))))
+
+
+def not_less_than_zero(seq: np.ndarray) -> np.ndarray:
+    try:
+        len(seq)
+    except TypeError:
+        seq = [seq]
+    return np.array(list(map(lambda i: max(seq[i], 0), range(len(seq)))))

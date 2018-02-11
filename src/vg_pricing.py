@@ -3,10 +3,7 @@ import numpy as np
 from integration import integrate_simpson_vectorized
 import warnings as wr
 from config import inf_price
-
-'''
-    theta ** 2 + (2 * sigma ** 2) / nu > 0
-'''
+from data_helpers import not_less_than_zero
 
 
 def price_vg(pars: tuple, args: tuple) -> ndarray:
@@ -19,15 +16,14 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
         raise Exception("args should have 6 parameters: s, k, tau, r, q, is_call")
     s, k, tau, r, q, is_call = args
 
+    if type(s) is not float and type(s) is not int:
+        raise ValueError(f's must be float or int; passed {type(s)}')
+
     if type(k) is not np.ndarray and type(k) is not np.float64:
         if (type(k) is float) | (type(k) is int):
             k = np.array([float(k)])
         else:
-            raise Exception("k(strikes) should be either np.ndarray or numeric")
-
-    # natural constraint
-    if theta ** 2 + (2 * sigma ** 2) / nu < 0:
-        return np.array([np.Inf] * len(k))
+            raise ValueError(f"k(strikes) should be either np.array or numeric; passed {type(k)}")
 
     wr.filterwarnings('error')
     try:
@@ -38,21 +34,19 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
         call_prices = np.array([inf_price] * len(k))
 
     if is_call:
-        return call_prices
+        return not_less_than_zero(call_prices)
     else:
-        return call_prices + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau)
+        return not_less_than_zero(call_prices + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau))
 
 
 def call_price_vg(nu: float, theta: float, sigma: float, s, k: float, tau, r, q) -> float:
     v_p1 = 0.5 + 1 / pi * integrate_simpson_vectorized(
         f=lambda om: p1_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        lower=1e-14,
-        upper=5000)
+        lower=1e-14)
 
     v_p2 = 0.5 + 1 / pi * integrate_simpson_vectorized(
         f=lambda om: p2_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        lower=1e-14,
-        upper=5000)
+        lower=1e-14)
 
     return exp(-q * tau) * s * v_p1 - exp(-r * tau) * k * v_p2
 

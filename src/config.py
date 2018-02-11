@@ -4,5 +4,5 @@ inf_metric = 1e6
 
 
 # for integration
-upper = 100
+upper = 70
 n = 2000
