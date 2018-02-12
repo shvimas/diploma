@@ -34,9 +34,9 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
         call_prices = np.array([inf_price] * len(k))
 
     if is_call:
-        return not_less_than_zero(call_prices)
+        return not_less_than_zero(call_prices).flatten()
     else:
-        return not_less_than_zero(call_prices + exp(-r * t) * k - exp(-q * t) * s)
+        return not_less_than_zero(call_prices.flatten() + exp(-r * t) * k - exp(-q * t) * s)
 
 
 # noinspection PyUnusedLocal

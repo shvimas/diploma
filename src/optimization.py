@@ -11,7 +11,7 @@ def mean(seq) -> float:
 
 
 def mean_absolute_error(predicted, actual) -> float:
-    return mean(abs(predicted - actual))
+    return mean(np.abs(predicted - actual))
 
 
 '''

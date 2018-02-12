@@ -34,9 +34,10 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
         call_prices = np.array([inf_price] * len(k))
 
     if is_call:
-        return not_less_than_zero(call_prices)
+        return not_less_than_zero(call_prices).flatten()
     else:
-        return not_less_than_zero(call_prices + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau))
+        return not_less_than_zero(
+            call_prices.flatten() + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau))
 
 
 def call_price_vg(nu: float, theta: float, sigma: float, s, k: float, tau, r, q) -> float:

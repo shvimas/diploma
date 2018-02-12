@@ -37,7 +37,7 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
     return np.array(list(map(
         lambda i: not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
                                           r=r, q=q, t=t, s0=s, k=k[i])),
-        range(len(k)))))
+        range(len(k))))).flatten()
 
 
 def heston_put_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
