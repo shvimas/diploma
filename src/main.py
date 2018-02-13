@@ -10,6 +10,7 @@ from typing import List
 from sklearn.decomposition import PCA
 from multiprocessing import Pool
 import re
+import numpy as np
 
 
 def opt_func(pars, *args) -> float:
@@ -113,6 +114,10 @@ def func(args: tuple):
 
 
 def main() -> None:
+
+    # need to somehow work around with overflows
+    np.seterr(all='warn')
+
     data, info = read_data("SPH2_031612.csv")
 
     day = 0
@@ -150,9 +155,6 @@ def main() -> None:
     heston_best = open(get_filename(model='heston', metric=metric), "w")
     vg_best = open(get_filename(model='vg', metric=metric), "w")
     ls_best = open(get_filename(model='ls', metric=metric), "w")
-
-    # need to somehow work around with overflows
-    np.seterr(all='warn')
 
     try:
         data, info = prepare_data(data=data, info=info)
