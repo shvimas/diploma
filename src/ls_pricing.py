@@ -1,9 +1,7 @@
 from scipy import *
 import numpy as np
-import integration
 from scipy.integrate import quad
 import warnings as wr
-from config import inf_price
 from data_helpers import not_less_than_zero
 
 
@@ -31,7 +29,7 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
     try:
         call_prices = ls_call_price(strikes=(np.log(k / s)), beta=beta, r=r, d=q, t=t, alpha=alpha, sigma=sigma)
     except Warning:
-        call_prices = np.array([inf_price] * len(k))
+        call_prices = np.array([np.inf] * len(k))
 
     if is_call:
         return not_less_than_zero(call_prices).flatten()
@@ -97,6 +95,6 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float,
             result = np.append(result, res_val)
 
     except Warning:
-        result = np.array([inf_price] * len(strikes))
+        result = np.array([np.inf] * len(strikes))
 
     return result

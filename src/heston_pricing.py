@@ -2,7 +2,6 @@ from scipy import *
 import numpy as np
 from integration import integrate_simpson_vectorized
 import warnings as wr
-from config import inf_price
 from data_helpers import not_less_than_zero
 
 '''
@@ -51,7 +50,7 @@ def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
         a = s0 * exp(-q * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
         b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
     except Warning:
-        a = inf_price
+        a = np.inf
         b = 0
     return a - b
 
