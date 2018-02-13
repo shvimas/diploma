@@ -49,4 +49,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
     vals = tuple(zip(best_rates, best_fun))
     for i in range(len(best_rates.keys())):
         res[list(best_rates.keys())[i]] = vals[i]
+
+    f.close()
+
     return res

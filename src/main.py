@@ -119,13 +119,13 @@ def main() -> None:
 
     market = EvalArgs(spot=info[day].spot, k=data.strikes[True][day], tau=info[day].mat, r=.03, q=.03, call=True)
 
-    '''
     from rate import find_opt_rates
+
     find_opt_rates(args=market, actual=data.prices[market.is_call][day])
     market.is_call = False
     find_opt_rates(args=market, actual=data.prices[market.is_call][day])
     market.is_call = True
-    '''
+    return
 
     # tune_all_models(market, "RMR")
 
