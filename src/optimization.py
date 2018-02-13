@@ -14,23 +14,19 @@ def mean_absolute_error(predicted, actual) -> float:
     return mean(np.abs(predicted - actual))
 
 
-'''
-def ratio(predicted: np.ndarray, actual: np.ndarray, max_val=1e10) -> np.ndarray:
+def ratio(predicted: np.ndarray, actual: np.ndarray) -> list:
     for i in range(len(predicted)):
-        if predicted[i] == np.Inf:
-            predicted[i] = max_val
-    tmp = list(map(lambda x: abs(x) if x >= 1 else abs(1 / x), predicted / actual))
-    # finish this
-'''
+        if predicted[i] == 0.0:
+            predicted[i] = config.eps
+    return list(map(lambda x: np.abs(x) if x >= 1 else np.abs(1 / x), predicted / actual))
 
 
 def mean_ratio(predicted, actual) -> float:
-    tmp = list(map(lambda x: abs(x) if abs(x) >= 1 else abs(1 / x), predicted / actual))
-    return mean(tmp)
+    return mean(ratio(predicted, actual))
 
 
 def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
-    tmp = list(map(lambda x: abs(x) if abs(x) >= 1 else abs(1 / x), predicted / actual))
+    tmp = ratio(predicted, actual)
     n = len(tmp)
     p = n - int(n * alpha)
     return mean(sorted(tmp)[:p])

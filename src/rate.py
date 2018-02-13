@@ -29,6 +29,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
     for rate in [i * step for i in range(start_from, int(upper / step) + 1)]:
         for model in ("heston", "vg", "ls"):
             args.r = rate
+            args.q = rate
             res = differential_evolution(
                     func=lambda pars: metrics[metric](model_prices(pars=pars, args=args, model=model), actual),
                     maxiter=50, polish=True,
