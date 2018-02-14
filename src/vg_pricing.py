@@ -2,6 +2,7 @@ from scipy import *
 import numpy as np
 from integration import integrate_simpson_vectorized
 import warnings as wr
+from config import inf_price
 from data_helpers import not_less_than_zero
 
 
@@ -30,7 +31,7 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
                 lambda i: call_price_vg(s=s, k=k[i], tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
                 range(len(k)))))
     except Warning:
-        call_prices = np.array([np.inf] * len(k))
+        call_prices = np.array([inf_price] * len(k))
 
     if is_call:
         return not_less_than_zero(call_prices).flatten()
