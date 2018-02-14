@@ -74,12 +74,13 @@ def optimize_model(model: str, info: List[Info], data: Data,
 
 def tune_all_models(args: EvalArgs, metric: str):
 
-    def get_centers(model: str, metric_: str, is_call: bool) -> str:
-        return extract_centers(get_filename(model=model, metric=metric_, is_call=is_call))
+    def get_centers(model: str, metric_: str, is_call_: bool) -> str:
+        return extract_centers(get_filename(model=model, metric=metric_, is_call=is_call_))
 
     models = {"heston", "vg", "ls"}
     for model1, model2, is_call in [(m1, m2, c) for m1 in models for m2 in models - {m1} for c in [True, False]]:
-        centers1 = get_centers(model=model1, metric_=metric, is_call=is_call)
+        gen = get_centers(model=model1, metric_=metric, is_call_=is_call)
+        centers1 = np.array([]) # FIXME
         pca = PCA(n_components=2)
         factors = pca.components_
         centers1_2d = pca.fit_transform(centers1)
@@ -120,6 +121,7 @@ def main() -> None:
 
     data, info = read_data("SPH2_031612.csv")
 
+    '''
     day = 0
 
     market = EvalArgs(spot=info[day].spot, k=data.strikes[True][day], tau=info[day].mat, r=.03, q=.03, call=True)
@@ -130,7 +132,7 @@ def main() -> None:
     market.is_call = False
     find_opt_rates(args=market, actual=data.prices[market.is_call][day])
     market.is_call = True
-    return
+    '''
 
     # tune_all_models(market, "RMR")
 

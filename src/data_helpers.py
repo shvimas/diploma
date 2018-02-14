@@ -1,6 +1,5 @@
 import csv
 from math import exp
-
 from structs import Info, Data
 import numpy as np
 from typing import List, Tuple
