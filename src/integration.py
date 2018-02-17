@@ -1,18 +1,28 @@
 import numpy as np
-from scipy.integrate import simps
-# import tensorflow as tf
+from scipy.integrate import simps, quad
 import config as cfg
 
 
 class Integrator:
     def __init__(self):
         self.n = cfg.n
+        self.lower = cfg.lower
         self.upper = cfg.upper
         self.integrate_impl = Integrator.integrate_impl_simps
+        self.integrate_impl_1d = lambda f, lower, upper: quad(func=f, a=lower, b=upper)[0]
 
-    def integrate(self, f, lower, upper=None, n=None) -> np.matrix:
+    def integrate_1d(self, f, lower=None, upper=None):
+        if lower is None:
+            lower = 0
+        if upper is None:
+            upper = self.upper
+        return self.integrate_impl_1d(f=f, lower=lower, upper=upper)
+
+    def integrate(self, f, lower=None, upper=None, n=None) -> np.matrix:
         if n is None:
             n = self.n
+        if lower is None:
+            lower = self.lower
         if upper is None:
             upper = self.upper
         return self.integrate_impl(f=f, lower=lower, upper=upper, n=n)
@@ -39,25 +49,9 @@ class Integrator:
 integrator = Integrator()
 
 
-def integrate_simpson(f, lower, upper=cfg.upper, n=cfg.n) -> float:
-    h = (upper - lower) / n
-    result = h / 3 * (f(lower) + f(upper))
-    for i in range(1, n):
-        result = result + h / 3 * (3 + (-1) ** (i + 1)) * f(lower + i * h)
-    return result
+def integrate(f, lower=None, upper=None) -> float:
+    return integrator.integrate_1d(f=f, lower=lower, upper=upper)
 
 
-def integrate_simpson_vectorized(f, lower, upper=None, n=None) -> np.matrix:
+def integrate_simpson_vectorized(f, lower=None, upper=None, n=None) -> np.matrix:
     return integrator.integrate(f=f, lower=lower, upper=upper, n=n)
-
-
-'''
-def integrate_simpson_tensorflow(f, lower, upper, n=5000):
-    h = (upper - lower) / n
-    q = tf.range(start=0, limit=n+1, dtype=tf.float32)
-    f_values = f(lower + q * h)
-    w = 3 + (-1) ** (q + 1)
-    w[0] = 0
-    w[-1] = 0
-    return h / 3 * tf.matmul(f_values, w, transpose_b=True)
-'''

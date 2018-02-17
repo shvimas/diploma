@@ -154,3 +154,10 @@ def not_less_than_zero(seq: np.ndarray) -> np.ndarray:
     except TypeError:
         seq = [seq]
     return np.array(list(map(lambda i: max(seq[i], 0), range(len(seq)))))
+
+
+def gen2list(g):
+    a = []
+    for i in g:
+        a.append(i)
+    return a

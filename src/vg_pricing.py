@@ -1,6 +1,6 @@
 from scipy import *
 import numpy as np
-from integration import integrate_simpson_vectorized
+from integration import integrate, integrate_simpson_vectorized
 import warnings as wr
 from config import inf_price
 from data_helpers import not_less_than_zero
@@ -26,12 +26,10 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
             raise ValueError(f"k(strikes) should be either np.array or numeric; passed {type(k)}")
 
     wr.filterwarnings('error')
-    try:
-        call_prices = np.array(list(map(
-                lambda i: call_price_vg(s=s, k=k[i], tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-                range(len(k)))))
-    except Warning:
-        call_prices = np.array([inf_price] * len(k))
+
+    call_prices = np.array(list(map(
+        lambda i: call_price_vg(s=s, k=k[i], tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
+        range(len(k)))))
 
     if is_call:
         return not_less_than_zero(call_prices).flatten()
@@ -41,15 +39,16 @@ def price_vg(pars: tuple, args: tuple) -> ndarray:
 
 
 def call_price_vg(nu: float, theta: float, sigma: float, s, k: float, tau, r, q) -> float:
-    v_p1 = 0.5 + 1 / pi * integrate_simpson_vectorized(
-        f=lambda om: p1_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        lower=1e-14)
+    try:
+        v_p1 = 0.5 + 1 / pi * integrate_simpson_vectorized(
+            f=lambda om: p1_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma))
 
-    v_p2 = 0.5 + 1 / pi * integrate_simpson_vectorized(
-        f=lambda om: p2_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma),
-        lower=1e-30)
+        v_p2 = 0.5 + 1 / pi * integrate_simpson_vectorized(
+            f=lambda om: p2_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma))
 
-    return exp(-q * tau) * s * v_p1 - exp(-r * tau) * k * v_p2
+        return exp(-q * tau) * s * v_p1 - exp(-r * tau) * k * v_p2
+    except Warning:
+        return inf_price
 
 
 def p1_value_vg(om, s, k, tau, r, q, nu, theta, sigma):

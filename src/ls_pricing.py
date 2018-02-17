@@ -1,7 +1,6 @@
 from scipy import *
 import numpy as np
 import integration
-from scipy.integrate import quad
 import warnings as wr
 from config import inf_price
 from data_helpers import not_less_than_zero
@@ -29,7 +28,7 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
 
     wr.filterwarnings('error')
     try:
-        call_prices = ls_call_price(strikes=(np.log(k / s)), beta=beta, r=r, d=q, t=t, alpha=alpha, sigma=sigma)
+        call_prices = s * ls_call_price(strikes=(np.log(k / s)), beta=beta, r=r, d=q, t=t, alpha=alpha, sigma=sigma)
     except Warning:
         call_prices = np.array([inf_price] * len(k))
 
@@ -59,7 +58,8 @@ def ls_psi(v: ndarray, beta: float, r: float, d: float, t: float,
 
 def ls_integrand_vectorized(v: ndarray, k: ndarray,
                             beta: float, r: float, d: float, t: float, sigma: float, alpha: float) -> ndarray:
-    return np.real(np.multiply(exp(-1j * np.mat(k).transpose() @ np.mat(v)), ls_psi(v, beta, r, d, t, sigma, alpha)))
+    return np.real(np.multiply(exp(-1j * np.mat(k).transpose() @ np.mat(v)),
+                               ls_psi(v, beta, r, d, t, sigma, alpha)))
 
 
 def ls_integrand(v: ndarray, k: float, beta: float, r: float, d: float, t: float,
@@ -82,7 +82,7 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float,
 
     wr.filterwarnings('error')
     try:
-        '''
+
         def integrand(v: ndarray):
             return ls_integrand_vectorized(v, strikes, beta, r, d, t, sigma, alpha)
 
@@ -95,6 +95,7 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float,
 
             res_val = 1 / pi * exp(-beta * strike) * quad(integrand, 0, a)[0]
             result = np.append(result, res_val)
+        '''
 
     except Warning:
         result = np.array([inf_price] * len(strikes))

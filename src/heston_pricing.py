@@ -57,10 +57,8 @@ def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
 
 
 def heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
-    integral = integrate_simpson_vectorized(
-        lambda phi: int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ),
-        lower=1e-30)
-    return 0.5 + (1 / pi) * integral
+    return 0.5 + (1 / pi) * integrate_simpson_vectorized(
+        lambda phi: int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ))
 
 
 # COPY FROM R

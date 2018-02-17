@@ -16,7 +16,7 @@ def mean_absolute_error(predicted, actual) -> float:
 
 def ratio(predicted: np.ndarray, actual: np.ndarray) -> list:
     for i in range(len(predicted)):
-        if predicted[i] == 0.0:
+        if abs(predicted[i]) < config.eps:
             predicted[i] = config.eps
     return list(map(lambda x: np.abs(x) if x >= 1 else np.abs(1 / x), predicted / actual))
 

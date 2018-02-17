@@ -1,8 +1,6 @@
-from scipy.optimize import differential_evolution
-from optimization import metrics
 from structs import EvalArgs
 import numpy as np
-from modeling import par_bounds, model_prices
+from modeling import par_bounds, tune_model
 import re
 from data_helpers import array2str
 
@@ -17,7 +15,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
         postfix = "put"
 
     metric = "RMR"
-    step = .0001
+    step = .001
     upper = 1
 
     with open(f"params/opt_rate_{postfix}.txt", "a+") as f:
@@ -32,10 +30,8 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
             for model in ("heston", "vg", "ls"):
                 args.r = rate
                 args.q = rate
-                res = differential_evolution(
-                        func=lambda pars: metrics[metric](model_prices(pars=pars, args=args, model=model), actual),
-                        maxiter=50, polish=True,
-                        bounds=par_bounds[model])
+                res = tune_model(args=args, bounds=par_bounds[model], model=model, local=False,
+                                 metric=metric, prices=actual, polish=True, maxiter=50)
 
                 if best_fun[model] > res.fun:
                     best_rates[model] = rate

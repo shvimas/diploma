@@ -122,6 +122,7 @@ def main() -> None:
     data, info = read_data("SPH2_031612.csv")
 
     '''
+
     day = 0
 
     market = EvalArgs(spot=info[day].spot, k=data.strikes[True][day], tau=info[day].mat, r=.03, q=.03, call=True)
@@ -146,12 +147,13 @@ def main() -> None:
     kwargs = [{
         'data': data,
         'rate': .03,
-        'is_call': True,
+        'is_call': False,
         'log2console': log2console,
         'disp': False
     }] * len(models)
     all_args = zip(models, [metric] * len(models), [info] * len(models), kwargs)
     pool.map(func, all_args)
+
 
     '''
     heston_best = open(get_filename(model='heston', metric=metric), "w")

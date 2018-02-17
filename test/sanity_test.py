@@ -57,7 +57,7 @@ def test():
 
             calculated = float(func(pars, args))
             diff = abs(answer - calculated)
-            if diff > 1e-2 * answer and diff > 1e-3:
+            if diff > 1e-2 * answer and diff > 1e-3 and not (answer < 0 and calculated == 0):
                 correct = False
                 log.write(f"Sanity test failed with case: {', '.join(case)}\n"
                           f"\tR answer: {answer}\n"
