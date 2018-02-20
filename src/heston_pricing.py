@@ -10,7 +10,7 @@ from data_helpers import not_less_than_zero
 '''
 
 
-def price_heston(pars: tuple, args: tuple) -> ndarray:
+def price_heston(pars: tuple, args: tuple, strict=False, check=True, bounds_only=True) -> ndarray:
     if (len(args)) != 6:
         raise Exception("args should have 6 parameters: s, k, t, r, q, is_call")
 
@@ -18,6 +18,9 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
         raise Exception("pars should have 5 parameters: kappa, theta, sigma, rho, v0")
 
     kappa, theta, sigma, rho, v0 = pars
+    if check and bad_pars(*pars, bounds_only=bounds_only):
+        raise ValueError(f'bad parameters for heston: {pars}')
+
     s, k, t, r, q, is_call = args
 
     if type(s) is not float and type(s) is not int:
@@ -34,10 +37,27 @@ def price_heston(pars: tuple, args: tuple) -> ndarray:
     else:
         func = heston_put_value_int
 
-    return np.array(list(map(
-        lambda i: not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
-                                          r=r, q=q, t=t, s0=s, k=k[i])),
-        range(len(k))))).flatten()
+    wr.filterwarnings('error')
+
+    try:
+        return np.array(list(map(
+            lambda strike: not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
+                                              r=r, q=q, t=t, s0=s, k=strike)),
+            k))).flatten()
+    except Warning:
+        if strict:
+            raise ValueError(f"failed to model prices with {pars}")
+        return np.array([inf_price] * len(k))
+
+
+def bad_pars(kappa, theta, sigma, rho, v0, bounds_only: bool) -> bool:
+    result = theta <= 0
+    result |= sigma <= 0
+    result |= (rho < 0) | (rho > 1)
+    result |= v0 <= 0
+    if not bounds_only:
+        result |= 2 * kappa * theta <= sigma ** 2
+    return result
 
 
 def heston_put_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
@@ -46,13 +66,8 @@ def heston_put_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
 
 
 def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
-    wr.filterwarnings('error')
-    try:
-        a = s0 * exp(-q * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
-        b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
-    except Warning:
-        a = inf_price
-        b = 0
+    a = s0 * exp(-q * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 1)
+    b = k * exp(-r * t) * heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, 2)
     return a - b
 
 

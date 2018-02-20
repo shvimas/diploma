@@ -3,19 +3,19 @@ from math import exp
 from structs import Info, Data
 import numpy as np
 from typing import List, Tuple
-import re
 from math import sin, cos
-
-
-def func(row: list, val: str) -> int:
-    try:
-        ans = row.index(val)
-    except ValueError:
-        ans = -1
-    return ans
+import re
 
 
 def read_data(file) -> Tuple[Data, List[Info]]:
+
+    def func(row: list, val: str) -> int:
+        try:
+            ans = row.index(val)
+        except ValueError:
+            ans = -1
+        return ans
+
     with open(file, "r") as f:
         reader = csv.reader(f, delimiter=";")
         tmp = [[str(item).replace(",", ".") for item in row] for row in reader]
@@ -47,8 +47,8 @@ def read_data(file) -> Tuple[Data, List[Info]]:
 
 
 def sort_data(file):
-    with open(file) as input, open("sorted_" + file, "w") as output:
-        output.write("\n".join(sorted(list(input.readlines()), key=lambda l: l.split()[1])))
+    with open(file) as fin, open("sorted_" + file, "w") as fout:
+        fout.write("\n".join(sorted(list(fin.readlines()), key=lambda l: l.split()[1])))
 
 
 def array2str(arr: np.ndarray) -> str:
@@ -106,13 +106,14 @@ try:
 
 
     def plot_dots(a: np.ndarray, b: np.ndarray = None, style1: str = 'ro', style2: str = 'bo', dim=2) -> None:
+        assert a.shape[1] == dim
+        if b is not None:
+            assert b.shape[1] == dim
         if dim == 2:
-            a = a.flatten()
             if b is not None:
-                b = b.flatten()
-                pl.plot(a[::2], a[1::2], style1, b[::2], b[1::2], style2)
+                pl.plot(a[:, 0], a[:, 1], style1, b[:, 0], b[:, 1], style2)
             else:
-                pl.plot(a[::2], a[1::2], style1)
+                pl.plot(a[:, 0], a[:, 1], style1)
         elif dim == 1:
             if b is not None:
                 pl.plot(range(len(a)), a, style1, range(len(b)), b, style2)
@@ -120,6 +121,19 @@ try:
                 pl.plot(range(len(a)), a, style1)
         else:
             raise ValueError('Only support dim == 1 or 2')
+
+
+    def plot_and_color_2d_params(model: str, dots: np.ndarray, factors: np.ndarray, means: np.ndarray,
+                                 style_bad='ro', style_good='bo', bounds_only=True) -> None:
+        restored = dots @ factors + means
+        is_bad = np.array(list(map(
+            lambda x: bad_pars(x, bounds_only=bounds_only, model=model),
+            restored
+        )))
+        good = dots[np.logical_not(is_bad)]
+        bad = dots[is_bad]
+        plot_dots(a=good, b=bad, style1=style_good, style2=style_bad)
+
 except ImportError:
     pass
 
@@ -161,3 +175,37 @@ def gen2list(g):
     for i in g:
         a.append(i)
     return a
+
+
+def grid(x_min: float, x_max: float, y_min: float, y_max: float, n=10):
+    x_step = (x_max - x_min) / n
+    y_step = (y_max - y_min) / n
+    return [np.array((x_min + i * x_step, y_min + j * y_step)) for i in range(n + 1) for j in range(n + 1)]
+
+
+def extract_floats(line: str) -> tuple:
+    return tuple(map(lambda x: float(x), re.findall(r'[0-9.e\-]+', line)))
+
+
+def get_pca_data(model: str, is_call: bool) -> tuple:
+    with open(f'params/pca_{model}.txt', 'r') as fin:
+        lines = fin.readlines()
+        bounds = extract_floats(lines[0 if is_call else 3])
+        factors = np.array(list(map(
+            lambda arr: extract_floats(arr),
+            re.findall(r'\[.+?\]', lines[1 if is_call else 4]))))
+        means = np.array(extract_floats(lines[2 if is_call else 5]))
+        return bounds, factors, means
+
+
+def bad_pars(pars: tuple, bounds_only: bool, model: str) -> bool:
+    import ls_pricing as ls
+    import vg_pricing as vg
+    import heston_pricing as he
+    if model == 'ls':
+        return ls.bad_pars(*pars, bounds_only=bounds_only)
+    elif model == 'vg':
+        return vg.bad_pars(*pars, bounds_only=bounds_only)
+    elif model == 'heston':
+        return he.bad_pars(*pars, bounds_only=bounds_only)
+    raise ValueError(f"Bad model {model}")

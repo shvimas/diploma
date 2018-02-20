@@ -54,7 +54,7 @@ class Range:
 class ParsRange:
     def __init__(self, model: str, center: tuple, widths: tuple, dots: int):
         self.center = center
-        self.dots = dots
+        self.dots_per_dim = dots
         {
             "heston": lambda c, w: self.__init_heston(center=c, widths=w),
             "vg": lambda c, w: self.__init_vg(center=c, widths=w),
@@ -64,8 +64,6 @@ class ParsRange:
     def __init_heston(self, center: tuple, widths: tuple):
         if len(center) != 5 or len(widths) != 5:
             raise ValueError("center and widths must be 5-dimensional")
-
-        self.dots_per_dim = max(1, int(self.dots ** .2))
 
         self.kappa_range = Range(center=center[0], width=widths[0], num=self.dots_per_dim)
         self.kappa = self.kappa_range.min
@@ -89,8 +87,6 @@ class ParsRange:
         if len(center) != 3 or len(widths) != 3:
             raise ValueError("center and widths must be 3-dimensional")
 
-        self.dots_per_dim = max(1, int(self.dots ** (1/3)))
-
         self.nu_range = Range(center=center[0], width=widths[0], num=self.dots_per_dim)
         self.nu = self.nu_range.min
 
@@ -106,8 +102,6 @@ class ParsRange:
     def __init_ls(self, center: tuple, widths: tuple):
         if len(center) != 2 or len(widths) != 2:
             raise ValueError("center and widths must be 2-dimensional")
-
-        self.dots_per_dim = max(1, int(self.dots ** .5))
 
         self.alpha_range = Range(center=center[0], width=widths[0], num=self.dots_per_dim)
         self.alpha = self.alpha_range.min
@@ -127,7 +121,7 @@ class ParsRange:
 
     def __is_bad4vg(self) -> bool:
         result = self.theta ** 2 + (2 * self.sigma ** 2) / self.nu < 0
-        result |= self.sigma < 0
+        result |= self.sigma <= 0
         result |= self.nu < 0
         return result
 
@@ -161,6 +155,9 @@ class ParsRange:
                 if self.is_bad_set():
                     continue
                 yield self.alpha, self.sigma
+
+    def __iter_impl(self):
+        raise Exception('cannot iterate')
 
     def __iter__(self):
         return self.__iter_impl()

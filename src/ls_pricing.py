@@ -6,7 +6,7 @@ from config import inf_price
 from data_helpers import not_less_than_zero
 
 
-def price_ls(pars: tuple, args: tuple) -> ndarray:
+def price_ls(pars: tuple, args: tuple, strict=False, check=False, bounds_only=True) -> ndarray:
     if (len(args)) != 6:
         raise Exception("args should have 6 parameters: s, k, t, r, q, is_call")
 
@@ -14,6 +14,9 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
         raise Exception("pars should have 2 parameters: sigma, alpha")
 
     alpha, sigma = pars
+    if check and bad_pars(*pars, bounds_only=bounds_only):
+        raise ValueError(f'bad parameters for ls: {pars}')
+
     beta = get_beta(sigma=sigma, alpha=alpha)
     s, k, t, r, q, is_call = args
 
@@ -30,12 +33,22 @@ def price_ls(pars: tuple, args: tuple) -> ndarray:
     try:
         call_prices = s * ls_call_price(strikes=(np.log(k / s)), beta=beta, r=r, d=q, t=t, alpha=alpha, sigma=sigma)
     except Warning:
+        if strict:
+            raise ValueError(f"failed to model prices with {pars}")
         call_prices = np.array([inf_price] * len(k))
 
     if is_call:
         return not_less_than_zero(call_prices).flatten()
     else:
         return not_less_than_zero(call_prices.flatten() + exp(-r * t) * k - exp(-q * t) * s)
+
+
+# noinspection PyUnusedLocal
+def bad_pars(alpha, sigma, bounds_only: bool) -> bool:
+    result = sigma <= 0
+    result |= alpha <= 1
+    result |= alpha > 2
+    return result
 
 
 # noinspection PyUnusedLocal

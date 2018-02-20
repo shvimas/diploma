@@ -21,16 +21,18 @@ models = {
 }
 
 
-def model_prices(pars: tuple, args: EvalArgs, model: str) -> np.ndarray:
-    return models[model](pars=pars, args=args.as_tuple())
+def model_prices(pars: tuple, args: EvalArgs, model: str,
+                 strict=False, check=False, bounds_only=True) -> np.ndarray:
+    return models[model](pars=pars, args=args.as_tuple(),
+                         strict=strict, check=check, bounds_only=bounds_only)
 
 
-def tune_model(args: EvalArgs, bounds: tuple, model: str, metric: str, prices: np.ndarray,
+def tune_model(eval_args: EvalArgs, bounds: tuple, model: str, metric: str, prices: np.ndarray,
                local=False, **kwargs) -> opt.OptimizeResult:
     """
     Finds best(global or local) parameters for specified model
 
-    :param args: market parameters + quality metric as args[-2] + actual prices as args[-1]
+    :param eval_args: market parameters + quality metric as args[-2] + actual prices as args[-1]
     :param bounds: model parameters natural bounds in format: ((min1, max1), ...)
     :param model: pricing model
     :param metric: quality metric
@@ -41,13 +43,29 @@ def tune_model(args: EvalArgs, bounds: tuple, model: str, metric: str, prices: n
     """
 
     if local:
+        try:
+            kwargs.pop('disp')
+        except KeyError:
+            pass
+        try:
+            kwargs.pop('maxiter')
+        except KeyError:
+            pass
+        try:
+            kwargs.pop('polish')
+        except KeyError:
+            pass
         res = opt.minimize(
-                fun=lambda pars: estimate_model(pars, args, model, metric, prices),
+                fun=lambda pars: estimate_model(pars, eval_args, model, metric, prices),
                 bounds=bounds,
                 **kwargs)
     else:
+        try:
+            kwargs.pop('x0')
+        except KeyError:
+            pass
         res = opt.differential_evolution(
-                func=lambda pars: estimate_model(pars, args, model, metric, prices),
+                func=lambda pars: estimate_model(pars, eval_args, model, metric, prices),
                 bounds=bounds,
                 **kwargs)
 
@@ -60,7 +78,7 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, metric: str,
 
     for pars1 in ParsRange(model=model1, center=center, widths=widths, dots=dots):
         prices = model_prices(pars=pars1, args=args, model=model1)
-        result = tune_model(args=args, bounds=bounds2, metric=metric, model=model2, prices=prices, local=False)
+        result = tune_model(eval_args=args, bounds=bounds2, metric=metric, model=model2, prices=prices, local=False)
         pars2 = result.x
 
         with open(f"params/{model1}_{model2}_{metric}.txt", "a") as out:

@@ -30,7 +30,7 @@ def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:
             for model in ("heston", "vg", "ls"):
                 args.r = rate
                 args.q = rate
-                res = tune_model(args=args, bounds=par_bounds[model], model=model, local=False,
+                res = tune_model(eval_args=args, bounds=par_bounds[model], model=model, local=False,
                                  metric=metric, prices=actual, polish=True, maxiter=50)
 
                 if best_fun[model] > res.fun:
