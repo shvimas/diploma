@@ -1,8 +1,6 @@
 import numpy as np
 from structs import EvalArgs
-from vg_pricing import price_vg
-from heston_pricing import price_heston
-from ls_pricing import price_ls
+import modeling as mo
 import config
 
 
@@ -32,12 +30,6 @@ def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
     return mean(sorted(tmp)[:p])
 
 
-models = {
-    "heston": price_heston,
-    "vg":     price_vg,
-    "ls":     price_ls
-}
-
 metrics = {
     "MAE":        mean_absolute_error,
     "mean ratio": mean_ratio,
@@ -46,9 +38,9 @@ metrics = {
 }
 
 
-def apply_metric(predicted, actual, metric="MAE") -> float:
+def apply_metric(predicted, actual, metric="MAE", **kwargs) -> float:
     try:
-        return metrics[metric](predicted, actual)
+        return metrics[metric](predicted, actual, **kwargs)
     except Warning:
         return config.inf_metric
 
@@ -75,9 +67,9 @@ def estimate_model(pars: tuple, args: EvalArgs, model: str, metric: str, prices:
     :return: value of quality metric on passed parameters
     """
 
-    k = args.strikes
+    k = args.get_strikes()
 
-    if model not in models.keys():
+    if model not in mo.models.keys():
         raise Exception("Cannot use model " + model)
 
     if metric not in metrics.keys():
@@ -86,4 +78,4 @@ def estimate_model(pars: tuple, args: EvalArgs, model: str, metric: str, prices:
     if (type(prices) is not np.ndarray) | (type(k) is not np.ndarray) | (len(prices) != len(k)):
         raise Exception("strikes and prices should be np.arrays with same length")
 
-    return apply_metric(models[model](pars=pars, args=args.as_tuple()), prices, metric)
+    return apply_metric(mo.models[model](pars=pars, args=args.as_tuple()), prices, metric)

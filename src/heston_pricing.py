@@ -1,9 +1,9 @@
 from scipy import *
 import numpy as np
-from integration import integrate_simpson_vectorized
+import integration
 import warnings as wr
-from config import inf_price
-from data_helpers import not_less_than_zero
+import config
+import helper_funcs as hf
 
 '''
     2 * kappa * theta > sigma ** 2
@@ -41,13 +41,13 @@ def price_heston(pars: tuple, args: tuple, strict=False, check=True, bounds_only
 
     try:
         return np.array(list(map(
-            lambda strike: not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
-                                              r=r, q=q, t=t, s0=s, k=strike)),
+            lambda strike: hf.not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
+                                                                r=r, q=q, t=t, s0=s, k=strike)),
             k))).flatten()
     except Warning:
         if strict:
             raise ValueError(f"failed to model prices with {pars}")
-        return np.array([inf_price] * len(k))
+        return np.array([config.inf_price] * len(k))
 
 
 def bad_pars(kappa, theta, sigma, rho, v0, bounds_only: bool) -> bool:
@@ -72,7 +72,7 @@ def heston_call_value_int(kappa, theta, sigma, rho, v0, r, q, t, s0, k):
 
 
 def heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
-    return 0.5 + (1 / pi) * integrate_simpson_vectorized(
+    return 0.5 + (1 / pi) * integration.integrate_simpson_vectorized(
         lambda phi: int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ))
 
 

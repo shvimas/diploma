@@ -1,8 +1,7 @@
-from optimization import estimate_model, is_good_enough
+import helper_funcs
 import scipy.optimize as opt
 from modeling import par_bounds
 from structs import Info, Data, EvalArgs
-from modeling import tune_model, model_prices
 from time import time
 from datetime import timedelta
 from typing import List
@@ -10,75 +9,75 @@ from multiprocessing import Pool
 import re
 import numpy as np
 import data_helpers as dh
-
-
-def opt_func(pars, *args) -> float:
-    if len(args) != 6:
-        raise ValueError("args must have exactly 6 items")
-    out = args[0]
-    log2console = args[1]
-    model = args[2]
-    metric = args[3]
-    actual = args[4]
-    quality = estimate_model(pars, EvalArgs.from_tuple(args[5]), model, metric, actual)
-
-    msg = metric + ": " + str(quality) + " with params: " + dh.array2str(pars)
-    if log2console:
-        print(msg)
-
-    if is_good_enough(quality, metric):
-        out.write(msg + "\n")
-
-    return quality
+from gen_pricer import GenPricer
 
 
 def optimize_model(model: str, info: List[Info], data: Data,
-                   metric: str, day: int, is_call: bool, rate: float,
-                   local: bool, **kwargs) -> opt.OptimizeResult:
+                   metric: str, day: int, rate: float,
+                   local: bool, use_fft: bool, **kwargs) -> opt.OptimizeResult:
 
     print(f"Optimizing {model} with {metric} on day {day}")
 
-    with open(dh.get_filename(model=model, metric=metric, best=False, is_call=is_call), "a") as good:
-        good.write("Day: " + str(day) + "\n")
+    actual_calls = data.prices[True][day]
+    actual_puts = data.prices[False][day]
+    pricer = GenPricer(model=model,
+                       market=EvalArgs.from_structure(data=data, info=info, rate=rate, day=day),
+                       use_fft=use_fft)
+    optimizer = opt.minimize if local else opt.differential_evolution
 
-        strikes = data.strikes[is_call][day]
-        actual = data.prices[is_call][day]
+    t0 = time()
+    result = pricer.optimize_pars(metric=metric,
+                                  actual_calls=actual_calls,
+                                  actual_puts=actual_puts,
+                                  bounds=par_bounds[model],
+                                  optimizer=optimizer,
+                                  **kwargs)
+    print(f"Time spent for {model}, day {day}: {timedelta(seconds=(time() - t0))}\n")
 
-        q = rate
-        maturity = info[day].mat / len(info)
-        spot = info[day].spot
-        t0 = time()
-
-        best_pars = tune_model(eval_args=EvalArgs.from_tuple((spot, strikes, maturity, rate, q, is_call)),
-                               bounds=par_bounds[model], model=model, metric=metric,
-                               prices=actual, local=local, **kwargs)
-        print(f"Time spent for {model}, day {day}: {timedelta(seconds=(time() - t0))}\n")
-
-        good.write("\n")
-
-    return best_pars
+    return result
 
 
 def tune_all_models(args: EvalArgs, metric: str):
-    models = {"heston", "vg", "ls"}
-    for model1, model2, is_call in [(m1, m2, c) for m1 in models for m2 in models - {m1} for c in [True, False]]:
+    args.is_call = None
+    model1 = 'vg'
+    models2 = {"heston", "ls"}
+    for model2 in models2:
+        pricer1 = GenPricer(model=model1, market=args, use_fft=True)
+        pricer2 = GenPricer(model=model2, market=args, use_fft=True)
         print(f"Tuning {model2} with {model1}")
-        args.is_call = is_call
-        bounds, factors, means = dh.get_pca_data(model=model1, is_call=is_call)
-        grid = dh.grid(*bounds, n=20)  # 20 dots for each dimension => 400 dots, but many will not be priced
-        with open(f'params/tune_{model1}_{model2}_{"call" if is_call else "put"}.txt', 'w') as f:
+        bounds, factors, means = dh.get_pca_data(model=model1)
+        grid = helper_funcs.grid(*bounds, n=20)  # 20 dots for each dimension => 400 dots, but some will not be priced
+        starting_dot = np.array([-np.Inf, -np.Inf])
+        with open(f'params/tune_{model2}_with_{model1}.txt', 'a+') as f:
+            try:
+                f.seek(0)
+                lines = f.readlines()
+                str_dot = re.search(r'from dot (.+?) with metric', lines[-1]).group(1)
+                starting_dot = np.array(helper_funcs.extract_floats(str_dot))
+            except IndexError or AttributeError:
+                pass
             for dot in grid:
+                if not np.all(dot[0] > starting_dot[0] or (dot[0] == starting_dot[0] and dot[1] > starting_dot[1])):
+                    print(f"Skipped dot {helper_funcs.array2str(dot)} -- already evaluated")
+                    continue
                 pars = dot @ factors + means
+                if dh.bad_pars(pars=pars, bounds_only=True, model=model1):
+                    print(f"Skipped dot {dot} because of bad {model1} pars {pars}")
+                    continue
                 try:
-                    prices = model_prices(pars=pars, args=args, model=model1,
-                                          strict=True, check=True, bounds_only=True)
+                    call_prices, put_prices = pricer1.price(pars=pars)
                     print(f"{dh.array2str(dot)} -> {dh.array2str(pars)}")
-                    if sum(prices > 1e5) > 0:
-                        raise ValueError(f"overflow in prices: {prices}")
+                    if sum(call_prices > 1e5) > 0:
+                        raise ValueError(f"overflow in call prices: {call_prices}")
+                    if sum(put_prices > 1e5) > 0:
+                        raise ValueError(f"overflow in put prices: {put_prices}")
 
                     t0 = time()
-                    res = tune_model(eval_args=args, bounds=par_bounds[model2], model=model2, metric=metric,
-                                     prices=prices, local=False, polish=True, maxiter=25)
+                    res = pricer2.optimize_pars(metric=metric, bounds=par_bounds[model2],
+                                                actual_puts=put_prices,
+                                                actual_calls=call_prices,
+                                                optimizer=opt.differential_evolution,
+                                                polish=True, maxiter=50, disp=False)
 
                     f.write(f"Pars {dh.array2str(pars)} from dot {dh.array2str(dot)} "
                             f"with metric {metric} = {res.fun}: {dh.array2str(res.x)}\n")
@@ -99,25 +98,19 @@ def get_last_day(filename: str) -> int:
         return -1
 
 
-def func(args: tuple):
+def calibrate(args: tuple):
+    assert len(args) == 4
     model = args[0]
     metric = args[1]
     info = args[2]
-    cycle = args[3]
-    kwargs = args[4]
-    start = get_last_day(dh.get_filename(model=model, metric=metric, is_call=kwargs['is_call']))
-    file = open(dh.get_filename(model=model, metric=metric, is_call=kwargs['is_call']), 'a')
-    prev = None
-    local = False
+    kwargs = args[3]
+    is_call = kwargs.pop('is_call')
+    start = get_last_day(helper_funcs.get_filename(model=model, metric=metric, is_call=is_call))
+    file = open(helper_funcs.get_filename(model=model, metric=metric, is_call=is_call), 'a')
     for day in range(start + 1, len(info)):
-        if model == 'heston' or model == 'vg':
-            local = day % cycle != 0 and prev is not None
-        if local:
-            kwargs['x0'] = prev.x
-        p1 = optimize_model(model=model, info=info, metric=metric, day=day, local=local, **kwargs)
-        file.write(f"Day {day} with func value {p1.fun}: {dh.array2str(p1.x)}\n")
+        result = optimize_model(model=model, info=info, metric=metric, day=day, local=False, **kwargs)
+        file.write(f"Day {day} with func value {result.fun}: {dh.array2str(result.x)}\n")
         file.flush()
-        prev = p1
     file.close()
 
 
@@ -126,12 +119,13 @@ def main() -> None:
     # need to somehow work around with overflows
     np.seterr(all='warn')
 
-    data, info = dh.read_data("SPH2_031612.csv")
+    data, info = helper_funcs.read_data("SPH2_031612.csv")
 
     day = 0
-    market = EvalArgs(spot=info[day].spot, k=data.strikes[True][day],
-                      tau=info[day].mat / len(info),
-                      r=.03, q=.03, call=True)
+    market = EvalArgs(spot=info[day].spot,
+                      k_call=data.strikes[True][day],
+                      k_put=data.strikes[False][day],
+                      tau=info[day].mat, r=.008, q=.008, call=None)
 
     tune_all_models(market, "MAE")
     '''
@@ -143,25 +137,24 @@ def main() -> None:
     market.is_call = True
     
 
-    log2console = False
     metric = "MAE"
-
-    data, info = dh.prepare_data(data=data, info=info)
-
-    pool = Pool()
-    models = ('heston', 'vg', 'ls')
-    kwargs = [{
+    models = ('vg', )
+    kwargs = {
         'data': data,
-        'rate': .03,
-        'is_call': True,
-        'log2console': log2console,
+        'rate': .008,
+        'is_call': None,  # both puts and calls
         'disp': False,
         'polish': True,
-        'maxiter': 50
-    }] * len(models)
-    all_args = zip(models, [metric] * len(models), [info] * len(models), [10] * len(models), kwargs)
-    pool.map(func, all_args)
+        'maxiter': 100,
+        'use_fft': True
+    }
+
+    all_args = zip(models, [metric] * len(models), [info] * len(models), [kwargs] * len(models))
+
+    pool = Pool()
+    pool.map(calibrate, all_args)
     '''
+
 
 
 if __name__ == "__main__":

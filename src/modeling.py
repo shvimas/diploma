@@ -1,23 +1,26 @@
-from vg_pricing import price_vg
-from heston_pricing import price_heston
-from ls_pricing import price_ls
+import vg_pricing as vg
+import heston_pricing as he
+import ls_pricing as ls
+import black_scholes as bs
 import numpy as np
 import scipy.optimize as opt
 from structs import EvalArgs
 from pars_range import ParsRange
-from optimization import estimate_model
-from data_helpers import array2str
+import optimization
+import data_helpers as dh
 
 par_bounds = {
-    "heston": ((1e-6, 10), (1e-7, 1), (1e-7, 2), (0, 1), (1e-10, 1)),
+    "heston": ((1e-6, 45), (1e-7, 1), (1e-7, 2), (-1, 1), (1e-10, 1)),
     "vg":     ((1e-6, 3), (-2, 2), (1e-6, 2)),
-    "ls":     ((1.00001, 1.99999), (1e-6, 2))
+    "ls":     ((1.00001, 1.99999), (1e-6, 2)),
+    "bs":     ((1e-10, 10), )
 }
 
 models = {
-    "heston": price_heston,
-    "vg":     price_vg,
-    "ls":     price_ls
+    "heston": he.price_heston,
+    "vg":     vg.price_vg,
+    "ls":     ls.price_ls,
+    "bs":     bs.price_bs
 }
 
 
@@ -56,7 +59,7 @@ def tune_model(eval_args: EvalArgs, bounds: tuple, model: str, metric: str, pric
         except KeyError:
             pass
         res = opt.minimize(
-                fun=lambda pars: estimate_model(pars, eval_args, model, metric, prices),
+                fun=lambda pars: optimization.estimate_model(pars, eval_args, model, metric, prices),
                 bounds=bounds,
                 **kwargs)
     else:
@@ -65,7 +68,7 @@ def tune_model(eval_args: EvalArgs, bounds: tuple, model: str, metric: str, pric
         except KeyError:
             pass
         res = opt.differential_evolution(
-                func=lambda pars: estimate_model(pars, eval_args, model, metric, prices),
+                func=lambda pars: optimization.estimate_model(pars, eval_args, model, metric, prices),
                 bounds=bounds,
                 **kwargs)
 
@@ -82,8 +85,8 @@ def tune_on_near_params(model1: str, model2: str, args: EvalArgs, metric: str,
         pars2 = result.x
 
         with open(f"params/{model1}_{model2}_{metric}.txt", "a") as out:
-            out.write(f"{array2str(pars1)} --> {array2str(pars2)} with quality metric {metric}: {result.fun}\n")
+            out.write(f"{dh.array2str(pars1)} --> {dh.array2str(pars2)} with quality metric {metric}: {result.fun}\n")
 
-        print(f"Estimated for {array2str(pars1)}")
+        print(f"Estimated for {dh.array2str(pars1)}")
 
     print("Done")

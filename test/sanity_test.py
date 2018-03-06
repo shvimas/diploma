@@ -1,6 +1,8 @@
-from heston_pricing import price_heston
-from vg_pricing import price_vg
-from ls_pricing import price_ls
+import heston_pricing as he
+import vg_pricing as vg
+import ls_pricing as ls
+import fft
+import numpy as np
 import csv
 from typing import List
 
@@ -11,7 +13,7 @@ def read_r_data():
         return [[str(item).replace(",", ".") for item in row] for row in reader if len(row) != 0]
 
 
-def test():
+def test_r():
 
     # noinspection PyShadowingNames
     def prepare_args(a: List[str]) -> tuple:
@@ -41,15 +43,15 @@ def test():
             data = case[1:-1]
             answer = float(case[-1])
             if model.lower() == "heston":
-                func = price_heston
+                func = he.price_heston
                 pars = tuple(map(lambda x: float(x), data[:5]))
                 args = prepare_args(data[5:])
             elif model.lower() == "vg":
-                func = price_vg
+                func = vg.price_vg
                 pars = tuple(map(lambda x: float(x), data[:3]))
                 args = prepare_args(data[3:])
             elif model.lower() == "ls":
-                func = price_ls
+                func = ls.price_ls
                 pars = tuple(map(lambda x: float(x), data[:2]))
                 args = prepare_args(data[2:])
             else:
@@ -77,5 +79,19 @@ def test():
                 print(f"{i / len(cases):.{3}}")
 
 
+def test_fft():
+    spot = 100
+    strikes = np.array([90, 100, 110])
+    t = 1.2
+    r = .008
+    q = r
+    args_vg = (spot, strikes, t, r, q, True)
+    pars_vg = (.2, -.4, .1)
+    vg_prices1 = vg.price_vg(pars=pars_vg, args=args_vg)
+    vg_prices2 = fft.FFT(model='vg', args=args_vg).price(pars_vg)
+    pass
+
+
 if __name__ == "__main__":
-    test()
+    test_fft()
+    # test_r()

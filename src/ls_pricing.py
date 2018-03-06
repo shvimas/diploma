@@ -1,9 +1,10 @@
 from scipy import *
 import numpy as np
+
+import helper_funcs as hf
 import integration
 import warnings as wr
-from config import inf_price
-from data_helpers import not_less_than_zero
+import config
 
 
 def price_ls(pars: tuple, args: tuple, strict=False, check=False, bounds_only=True) -> ndarray:
@@ -35,12 +36,12 @@ def price_ls(pars: tuple, args: tuple, strict=False, check=False, bounds_only=Tr
     except Warning:
         if strict:
             raise ValueError(f"failed to model prices with {pars}")
-        call_prices = np.array([inf_price] * len(k))
+        call_prices = np.array([config.inf_price] * len(k))
 
     if is_call:
-        return not_less_than_zero(call_prices).flatten()
+        return hf.not_less_than_zero(call_prices).flatten()
     else:
-        return not_less_than_zero(call_prices.flatten() + exp(-r * t) * k - exp(-q * t) * s)
+        return hf.not_less_than_zero(call_prices.flatten() + exp(-r * t) * k - exp(-q * t) * s)
 
 
 # noinspection PyUnusedLocal
@@ -111,6 +112,6 @@ def ls_call_price(strikes: ndarray, beta: float, r: float, d: float, t: float,
         '''
 
     except Warning:
-        result = np.array([inf_price] * len(strikes))
+        result = np.array([config.inf_price] * len(strikes))
 
     return result

@@ -1,9 +1,10 @@
 from scipy import *
 import numpy as np
-from integration import integrate, integrate_simpson_vectorized
+
+import helper_funcs as hf
+import integration
 import warnings as wr
-from config import inf_price
-from data_helpers import not_less_than_zero
+import config
 
 
 def price_vg(pars: tuple, args: tuple, strict=False, check=False, bounds_only=True) -> ndarray:
@@ -36,12 +37,12 @@ def price_vg(pars: tuple, args: tuple, strict=False, check=False, bounds_only=Tr
     except Warning:
         if strict:
             raise ValueError(f"failed to model prices with {pars}")
-        return np.array([inf_price] * len(k))
+        return np.array([config.inf_price] * len(k))
 
     if is_call:
-        return not_less_than_zero(call_prices).flatten()
+        return hf.not_less_than_zero(call_prices).flatten()
     else:
-        return not_less_than_zero(
+        return hf.not_less_than_zero(
             call_prices.flatten() + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau))
 
 
@@ -54,10 +55,10 @@ def bad_pars(nu, theta, sigma, bounds_only: bool) -> bool:
 
 
 def call_price_vg(nu: float, theta: float, sigma: float, s, k: float, tau, r, q) -> float:
-    v_p1 = 0.5 + 1 / pi * integrate_simpson_vectorized(
+    v_p1 = 0.5 + 1 / pi * integration.integrate_simpson_vectorized(
         f=lambda om: p1_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma))
 
-    v_p2 = 0.5 + 1 / pi * integrate_simpson_vectorized(
+    v_p2 = 0.5 + 1 / pi * integration.integrate_simpson_vectorized(
         f=lambda om: p2_value_vg(om=om, s=s, k=k, tau=tau, r=r, q=q, nu=nu, theta=theta, sigma=sigma))
 
     return exp(-q * tau) * s * v_p1 - exp(-r * tau) * k * v_p2

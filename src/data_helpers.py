@@ -1,71 +1,33 @@
-import csv
 from math import exp
-from structs import Info, Data
+
+from helper_funcs import extract_floats
+from structs import Info, Data, EvalArgs
 import numpy as np
 from typing import List, Tuple
-from math import sin, cos
 import re
-
-
-def read_data(file) -> Tuple[Data, List[Info]]:
-
-    def func(row: list, val: str) -> int:
-        try:
-            ans = row.index(val)
-        except ValueError:
-            ans = -1
-        return ans
-
-    with open(file, "r") as f:
-        reader = csv.reader(f, delimiter=";")
-        tmp = [[str(item).replace(",", ".") for item in row] for row in reader]
-        tmp = tmp[:-1]  # last row is redundant
-
-    info = [[tmp[i][j] for j in range(0, 4)] for i in range(2, len(tmp), 2)]
-    strikes = [[tmp[i][j] for j in range(5, len(tmp[i]))] for i in range(2, len(tmp), 2)]
-    prices = [[tmp[i][j] for j in range(5, len(tmp[i]))] for i in range(3, len(tmp), 2)]
-
-    puts_pos = [row.index("PUT") for row in strikes]
-    end_pos = [func(row, "") for row in strikes]
-
-    # remove trailing empty cells and split by CP
-    strikes_call = [strikes[i][:puts_pos[i]] for i in range(0, len(strikes))]
-    strikes_put = [strikes[i][puts_pos[i]+1:end_pos[i]] for i in range(0, len(strikes))]
-    prices_call = [prices[i][:puts_pos[i]] for i in range(0, len(prices))]
-    prices_put = [prices[i][puts_pos[i]+1:end_pos[i]] for i in range(0, len(prices))]
-
-    # convert data from str to usable format
-    info = list(map(lambda row: Info(*row), info))
-
-    prices_call = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), prices_call))
-    prices_put = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), prices_put))
-    strikes_call = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), strikes_call))
-    strikes_put = list(map(lambda x: np.array(list(map(lambda s: float(s), x))), strikes_put))
-    data = Data(scall=strikes_call, sput=strikes_put, pcall=prices_call, pput=prices_put)
-
-    return data, info
-
-
-def sort_data(file):
-    with open(file) as fin, open("sorted_" + file, "w") as fout:
-        fout.write("\n".join(sorted(list(fin.readlines()), key=lambda l: l.split()[1])))
+import black_scholes as bs
+import gen_pricer as gp
+import scipy.optimize as opt
+import modeling as mo
 
 
 def array2str(arr: np.ndarray) -> str:
     return ", ".join(list(map(lambda x: str(x), arr)))
 
 
-def remove_itm_options(data: Data, info: List[Info], rate=.03) -> Tuple[Data, List[Info]]:
+def remove_options(data: Data, info: List[Info],
+                   rate=.03, remove_itm: bool = False) -> Tuple[Data, List[Info]]:
+    inv_factor = -1 if remove_itm else 1
     for day in range(len(info)):
         spot = info[day].spot
-        tau = info[day].mat / len(info)
-        otm_call = data.strikes[True][day] > spot * exp(rate * tau)
-        otm_put = data.strikes[False][day] < spot
+        tau = info[day].mat
+        good_calls = inv_factor * data.strikes[True][day] > spot * exp(rate * tau) * inv_factor
+        good_puts = inv_factor * data.strikes[False][day] < spot * exp(rate * tau) * inv_factor
 
-        data.strikes[True][day] = data.strikes[True][day][otm_call]
-        data.prices[True][day] = data.prices[True][day][otm_call]
-        data.strikes[False][day] = data.strikes[False][day][otm_put]
-        data.prices[False][day] = data.prices[False][day][otm_put]
+        data.strikes[True][day] = data.strikes[True][day][good_calls]
+        data.prices[True][day] = data.prices[True][day][good_calls]
+        data.strikes[False][day] = data.strikes[False][day][good_puts]
+        data.prices[False][day] = data.prices[False][day][good_puts]
 
     return data, info
 
@@ -83,8 +45,35 @@ def cut_tails(data: Data, info, min_perc=.01, min_price=10) -> Tuple[Data, List[
     return data, info
 
 
+def cut_by_bs_delta(data: Data, info: List[Info], rate=0.008, disp=False) -> Tuple[Data, List[Info]]:
+    for day, is_call in [(d, c) for d in range(len(info)) for c in [True, False]]:
+        pricer = gp.GenPricer(model='bs',
+                              market=EvalArgs.from_structure(data=data, info=info, rate=rate, day=day),
+                              use_fft=False)
+
+        result: opt.OptimizeResult = pricer.optimize_pars(metric='MAE',
+                                                          actual_calls=data.prices[True][day],
+                                                          actual_puts=data.prices[False][day],
+                                                          bounds=mo.par_bounds['bs'],
+                                                          optimizer=opt.differential_evolution,
+                                                          polish=True, disp=disp)
+        bs_sigma = result.x[0]
+        bs_sigma = bs_sigma
+
+        deltas = bs.bs_delta(spot=info[day].spot,
+                             strikes=data.strikes[is_call][day],
+                             r=rate, q=rate, t=info[day].mat,
+                             bs_sigma=bs_sigma,
+                             is_call=is_call)
+
+        data.prices[is_call][day] = data.prices[is_call][day][np.abs(deltas) >= .1]
+        data.strikes[is_call][day] = data.strikes[is_call][day][np.abs(deltas) >= .1]
+
+    return data, info
+
+
 def prepare_data(data: Data, info: List[Info]) -> Tuple[Data, List[Info]]:
-    return cut_tails(data=data, info=info)
+    return cut_by_bs_delta(*cut_tails(data=data, info=info))
 
 
 def extract_centers(filename: str):
@@ -138,63 +127,14 @@ except ImportError:
     pass
 
 
-def rotate(a: np.ndarray, alpha: float, center: np.ndarray = None) -> np.ndarray:
-    if center is None:
-        center = np.mean(a, axis=0)
-    rot_vec = np.array([[cos(alpha), -sin(alpha)], [sin(alpha), cos(alpha)]])
-    return (a - center) @ rot_vec + center
-
-
-def get_filename(model: str, metric: str, is_call: bool, best=True, from_dir='params') -> str:
-    return f"{from_dir}/{'best' if best else 'good'}4{model}_{metric}_{'call' if is_call else 'put'}.txt"
-
-
-def restore_data_from_factorized(factorized: np.ndarray, factors: np.ndarray, mean: np.ndarray) -> np.ndarray:
-    return mean + factorized @ factors
-
-
-def pair_max(seq1: np.ndarray, seq2: np.ndarray) -> np.ndarray:
-    if len(seq1) != len(seq2):
-        raise Exception("sequences must have the same length")
-
-    return np.array(list(map(
-            lambda i: max(seq1[i], seq2[i]),
-            range(len(seq1)))))
-
-
-def not_less_than_zero(seq: np.ndarray) -> np.ndarray:
-    try:
-        len(seq)
-    except TypeError:
-        seq = [seq]
-    return np.array(list(map(lambda i: max(seq[i], 0), range(len(seq)))))
-
-
-def gen2list(g):
-    a = []
-    for i in g:
-        a.append(i)
-    return a
-
-
-def grid(x_min: float, x_max: float, y_min: float, y_max: float, n=10):
-    x_step = (x_max - x_min) / n
-    y_step = (y_max - y_min) / n
-    return [np.array((x_min + i * x_step, y_min + j * y_step)) for i in range(n + 1) for j in range(n + 1)]
-
-
-def extract_floats(line: str) -> tuple:
-    return tuple(map(lambda x: float(x), re.findall(r'[0-9.e\-]+', line)))
-
-
-def get_pca_data(model: str, is_call: bool) -> tuple:
+def get_pca_data(model: str) -> tuple:
     with open(f'params/pca_{model}.txt', 'r') as fin:
         lines = fin.readlines()
-        bounds = extract_floats(lines[0 if is_call else 3])
+        bounds = extract_floats(lines[0])
         factors = np.array(list(map(
             lambda arr: extract_floats(arr),
-            re.findall(r'\[.+?\]', lines[1 if is_call else 4]))))
-        means = np.array(extract_floats(lines[2 if is_call else 5]))
+            re.findall(r'\[.+?\]', lines[1]))))
+        means = np.array(extract_floats(lines[2]))
         return bounds, factors, means
 
 
@@ -208,4 +148,4 @@ def bad_pars(pars: tuple, bounds_only: bool, model: str) -> bool:
         return vg.bad_pars(*pars, bounds_only=bounds_only)
     elif model == 'heston':
         return he.bad_pars(*pars, bounds_only=bounds_only)
-    raise ValueError(f"Bad model {model}")
+    raise ValueError(f"Unknown model {model}")
