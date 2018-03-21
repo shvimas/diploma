@@ -7,3 +7,6 @@ eps = 1e-20
 lower = 1e-30
 upper = 100
 n = 2000
+
+
+root_dir = '/Users/shvimas/GitHub/diploma'

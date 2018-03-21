@@ -1,15 +1,14 @@
 import csv
 import re
+import sys
 from math import cos, sin
 from typing import Tuple, List
-
 import numpy as np
-
 from structs import Data, Info
+from config import root_dir
 
 
 def read_data(file='SPH2_031612.csv') -> Tuple[Data, List[Info]]:
-
     def func(row: list, val: str) -> int:
         try:
             ans = row.index(val)
@@ -31,9 +30,9 @@ def read_data(file='SPH2_031612.csv') -> Tuple[Data, List[Info]]:
 
     # remove trailing empty cells and split by CP
     strikes_call = [strikes_raw[i][:puts_pos[i]] for i in range(0, len(strikes_raw))]
-    strikes_put = [strikes_raw[i][puts_pos[i]+1:end_pos[i]] for i in range(0, len(strikes_raw))]
+    strikes_put = [strikes_raw[i][puts_pos[i] + 1:end_pos[i]] for i in range(0, len(strikes_raw))]
     prices_call = [prices_raw[i][:puts_pos[i]] for i in range(0, len(prices_raw))]
-    prices_put = [prices_raw[i][puts_pos[i]+1:end_pos[i]] for i in range(0, len(prices_raw))]
+    prices_put = [prices_raw[i][puts_pos[i] + 1:end_pos[i]] for i in range(0, len(prices_raw))]
 
     # convert data from str to usable format
     info = list(map(lambda row: Info(*row), info_raw))
@@ -80,8 +79,8 @@ def pair_max(seq1: np.ndarray, seq2: np.ndarray) -> np.ndarray:
         raise Exception("sequences must have the same length")
 
     return np.array(list(map(
-            lambda i: max(seq1[i], seq2[i]),
-            range(len(seq1)))))
+        lambda i: max(seq1[i], seq2[i]),
+        range(len(seq1)))))
 
 
 def not_less_than_zero(seq: np.ndarray) -> np.ndarray:
@@ -99,11 +98,39 @@ def gen2list(g):
     return a
 
 
-def grid(x_min: float, x_max: float, y_min: float, y_max: float, n=10):
+def grid(x_min: float, x_max: float, y_min: float, y_max: float, n=10) -> np.ndarray:
     x_step = (x_max - x_min) / n
     y_step = (y_max - y_min) / n
-    return [np.array((x_min + i * x_step, y_min + j * y_step)) for i in range(n + 1) for j in range(n + 1)]
+    return np.array([[x_min + i * x_step, y_min + j * y_step] for i in range(n + 1) for j in range(n + 1)])
 
 
 def extract_floats(line: str) -> tuple:
-    return tuple(map(lambda x: float(x), re.findall(r'[0-9.e\-]+', line)))
+    return tuple(map(lambda x: float(x), re.findall(r'[0-9.e\-+]+', line)))
+
+
+def get_flagfile_name(pricing_model: str, tuning_model: str) -> str:
+    return f'{root_dir}/params/.flag_{tuning_model}_with_{pricing_model}'
+
+
+def log_print(msg: str, out1, out2=sys.stdout):
+    print(msg, file=out1, flush=True)
+    print(msg, file=out2, flush=True)
+
+
+def get_starting_dot(file, from_grid: bool) -> np.ndarray:
+    pattern = r'from dot (.+) with metric' if from_grid else r'Pars (.+) with metric'
+    file.seek(0)
+    lines = file.readlines()
+    try:
+        str_dot = re.search(pattern, lines[-1]).group(1)
+    except AttributeError:
+        raise ValueError(f'Failed to find {pattern} in {lines[-1]}')
+    return np.array(extract_floats(str_dot))
+
+
+def get_last_day(filename: str) -> int:
+    try:
+        with open(filename) as f:
+            return int(re.search(r'Day (.*?)[:\s]', f.readlines()[-1]).group(1))
+    except:  # FileNotFoundError or IndexError:
+        return -1

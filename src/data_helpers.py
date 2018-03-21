@@ -1,6 +1,5 @@
 from math import exp
-
-from helper_funcs import extract_floats
+import helper_funcs as hf
 from structs import Info, Data, EvalArgs
 import numpy as np
 from typing import List, Tuple
@@ -83,6 +82,8 @@ def extract_centers(filename: str):
                 yield tuple(map(lambda x: float(x), (re.search(r'.*with params: (.*)', line).group(1).split(", "))))
             elif 'with func value' in line:
                 yield tuple(map(lambda x: float(x), (re.search(r'.*value .*: (.*)', line).group(1).split(", "))))
+            elif 'tune' in filename:
+                yield tuple(map(lambda x: float(x), (re.search(r'.*: (.*)', line).group(1).split(", "))))
             elif 'Day' in line or line is '\n':
                 continue
             else:
@@ -130,11 +131,11 @@ except ImportError:
 def get_pca_data(model: str) -> tuple:
     with open(f'params/pca_{model}.txt', 'r') as fin:
         lines = fin.readlines()
-        bounds = extract_floats(lines[0])
+        bounds = hf.extract_floats(lines[0])
         factors = np.array(list(map(
-            lambda arr: extract_floats(arr),
+            lambda arr: hf.extract_floats(arr),
             re.findall(r'\[.+?\]', lines[1]))))
-        means = np.array(extract_floats(lines[2]))
+        means = np.array(hf.extract_floats(lines[2]))
         return bounds, factors, means
 
 
@@ -149,3 +150,23 @@ def bad_pars(pars: tuple, bounds_only: bool, model: str) -> bool:
     elif model == 'heston':
         return he.bad_pars(*pars, bounds_only=bounds_only)
     raise ValueError(f"Unknown model {model}")
+
+
+def get_tuned_params(model1: str, model2: str, drop_bad: bool, bounds_only=True) -> np.ndarray:
+    pars = np.array(hf.gen2list(extract_centers(f"params/tune_{model2}_with_{model1}.txt")))
+    if drop_bad:
+        pars = pars[list(map(lambda p: not bad_pars(pars=p, bounds_only=bounds_only, model=model2), pars))]
+    return pars
+
+
+def get_tuning_dots(pricing_model: str, tuning_model: str, from_grid: bool) -> np.ndarray:
+    if from_grid:
+        bounds, factors, means = get_pca_data(model=pricing_model)
+        return hf.grid(*bounds, n=20) @ factors + means
+    else:
+        # need to preserve the number of dots, so do not drop bad params
+        return get_tuned_params(model1=pricing_model, model2=tuning_model, drop_bad=False)
+
+
+def cut_bad_pars(pars: np.ndarray, model: str, bounds_only: bool) -> np.ndarray:
+    return pars[~np.array(list(map(lambda par: bad_pars(pars=par, bounds_only=bounds_only, model=model), pars)))]

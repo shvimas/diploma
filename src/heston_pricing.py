@@ -12,10 +12,10 @@ import helper_funcs as hf
 
 def price_heston(pars: tuple, args: tuple, strict=False, check=True, bounds_only=True) -> ndarray:
     if (len(args)) != 6:
-        raise Exception("args should have 6 parameters: s, k, t, r, q, is_call")
+        raise ValueError("args should have 6 parameters: s, k, t, r, q, is_call")
 
     if (len(pars)) != 5:
-        raise Exception("pars should have 5 parameters: kappa, theta, sigma, rho, v0")
+        raise ValueError("pars should have 5 parameters: kappa, theta, sigma, rho, v0")
 
     kappa, theta, sigma, rho, v0 = pars
     if check and bad_pars(*pars, bounds_only=bounds_only):
@@ -30,7 +30,7 @@ def price_heston(pars: tuple, args: tuple, strict=False, check=True, bounds_only
         if (type(k) is float) | (type(k) is int):
             k = np.array([float(k)])
         else:
-            raise ValueError(f"k(strikes) should be either np.array or numeric; passed {type(k)}")
+            raise TypeError(f"k(strikes) should be either np.array or numeric; passed {type(k)}")
 
     if is_call:
         func = heston_call_value_int
@@ -53,7 +53,7 @@ def price_heston(pars: tuple, args: tuple, strict=False, check=True, bounds_only
 def bad_pars(kappa, theta, sigma, rho, v0, bounds_only: bool) -> bool:
     result = theta <= 0
     result |= sigma <= 0
-    result |= (rho < 0) | (rho > 1)
+    result |= (rho < -1) | (rho > 1)
     result |= v0 <= 0
     if not bounds_only:
         result |= 2 * kappa * theta <= sigma ** 2
@@ -76,7 +76,6 @@ def heston_pvalue(kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
         lambda phi: int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ))
 
 
-# COPY FROM R
 def int_function_1(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, k, typ):
     ans = np.real(np.exp(-1j * np.outer(np.log(k), phi)) *
                   int_function_2(phi, kappa, theta, sigma, rho, v0, r, q, t, s0, typ) / (1j * phi))

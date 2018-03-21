@@ -29,7 +29,7 @@ def heston_log_return(u: ndarray, r: float, q: float, t: float,
     g = (kappa - rsip - d) / (kappa - rsip + d)
     exp_dt = exp(-d * t)
 
-    cf1 = 1j * u * (r - q) * t  # log(S0) assumed to be 0
+    cf1 = 1j * u * (r - q) * t  # log(S0) assumed to be 0 because spot is assumed to be 1.0
     cf2 = theta * kappa / sigma2 * ((kappa - rsip - d) * t - 2 * log((1 - g * exp_dt) / (1 - g)))
     cf3 = v0 / sigma2 * (kappa - rsip - d) * (1 - exp_dt) / (1 - g * exp_dt)
 
@@ -47,7 +47,7 @@ class FFT:
         except KeyError:
             raise ValueError('unsupported model: ' + model)
         if len(args) != 6:
-            raise ValueError('args must consist of: spot, strikes, maturity, rate, dividend rate, is_call')
+            raise ValueError('args must consist of: spot, strikes, maturity, rate, dividend rate, call/put')
         self.model = model
         self.spot, self.strikes, self.t, self.r, self.d, self.is_call = args
         self.beta = 1

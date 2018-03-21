@@ -1,16 +1,16 @@
 class Range:
     def __init__(self, num: int,
                  center: float = None, width: float = None,
-                 min: float = None, max: float = None):
+                 p_min: float = None, p_max: float = None):
         if type(num) is not int or num < 1:
             raise ValueError("num must be >= 1")
 
-        if min is None and max is None:
+        if p_min is None and p_max is None:
             self.min = center - width / 2
             self.max = center + width / 2
         elif center is None and width is None:
-            self.min = min
-            self.max = max
+            self.min = p_min
+            self.max = p_max
         else:
             raise ValueError("cannot crate Range with such parameters")
         self.num = num
@@ -18,7 +18,7 @@ class Range:
             self.step = (self.max - self.min) / (num - 1)
         else:
             self.step = 0
-            self.max = min
+            self.max = p_min
 
     def __iter__(self) -> float:
         for val in [self.min + i * self.step for i in range(0, self.num)]:
