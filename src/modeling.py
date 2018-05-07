@@ -1,33 +1,17 @@
-import vg_pricing as vg
-import heston_pricing as he
-import ls_pricing as ls
-import black_scholes as bs
 import numpy as np
 import scipy.optimize as opt
-from structs import EvalArgs
-from pars_range import ParsRange
-import optimization
+
+import config
 import data_helpers as dh
-
-par_bounds = {
-    "heston": ((1e-6, 45), (1e-7, 1), (1e-7, 2), (-1, 1), (1e-10, 1)),
-    "vg":     ((1e-6, 3), (-2, 2), (1e-6, 2)),
-    "ls":     ((1.00001, 1.99999), (1e-6, 2)),
-    "bs":     ((1e-10, 10), )
-}
-
-models = {
-    "heston": he.price_heston,
-    "vg":     vg.price_vg,
-    "ls":     ls.price_ls,
-    "bs":     bs.price_bs
-}
+import optimization
+from pars_range import ParsRange
+from structs import EvalArgs
 
 
 def model_prices(pars: tuple, args: EvalArgs, model: str,
                  strict=False, check=False, bounds_only=True) -> np.ndarray:
-    return models[model](pars=pars, args=args.as_tuple(),
-                         strict=strict, check=check, bounds_only=bounds_only)
+    return optimization.models[model](pars=pars, args=args.as_tuple(),
+                                      strict=strict, check=check, bounds_only=bounds_only)
 
 
 def tune_model(eval_args: EvalArgs, bounds: tuple, model: str, metric: str, prices: np.ndarray,
@@ -77,7 +61,7 @@ def tune_model(eval_args: EvalArgs, bounds: tuple, model: str, metric: str, pric
 
 def tune_on_near_params(model1: str, model2: str, args: EvalArgs, metric: str,
                         center: tuple, widths: tuple, dots: int):
-    bounds2 = par_bounds[model2]
+    bounds2 = config.par_bounds[model2]
 
     for pars1 in ParsRange(model=model1, center=center, widths=widths, dots=dots):
         prices = model_prices(pars=pars1, args=args, model=model1)

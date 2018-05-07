@@ -1,9 +1,10 @@
-from scipy import *
-import numpy as np
-import integration
 import warnings as wr
+
+from scipy import *
+
 import config
 import helper_funcs as hf
+import integration
 
 '''
     2 * kappa * theta > sigma ** 2
@@ -41,8 +42,8 @@ def price_heston(pars: tuple, args: tuple, strict=False, check=True, bounds_only
 
     try:
         return np.array(list(map(
-            lambda strike: hf.not_less_than_zero(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
-                                                                r=r, q=q, t=t, s0=s, k=strike)),
+            lambda strike: hf.cut_negative(func(kappa=kappa, theta=theta, sigma=sigma, rho=rho, v0=v0,
+                                                r=r, q=q, t=t, s0=s, k=strike)),
             k))).flatten()
     except Warning:
         if strict:

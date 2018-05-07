@@ -1,14 +1,17 @@
-import heston_pricing as he
-import vg_pricing as vg
-import ls_pricing as ls
-import fft
-import numpy as np
 import csv
 from typing import List
 
+import numpy as np
+
+import fft
+import vg_pricing as vg
+from config import root_dir
+from gen_pricer import GenPricer
+from structs import EvalArgs
+
 
 def read_r_data():
-    with open("R_sanity_data.csv") as f:
+    with open(f"{root_dir}/R_sanity_data.csv") as f:
         reader = csv.reader(f, delimiter=";")
         return [[str(item).replace(",", ".") for item in row] for row in reader if len(row) != 0]
 
@@ -43,21 +46,24 @@ def test_r():
             data = case[1:-1]
             answer = float(case[-1])
             if model.lower() == "heston":
-                func = he.price_heston
+                # func = he.price_heston
                 pars = tuple(map(lambda x: float(x), data[:5]))
                 args = prepare_args(data[5:])
             elif model.lower() == "vg":
-                func = vg.price_vg
+                # func = vg.price_vg
                 pars = tuple(map(lambda x: float(x), data[:3]))
                 args = prepare_args(data[3:])
             elif model.lower() == "ls":
-                func = ls.price_ls
+                # func = ls.price_ls
                 pars = tuple(map(lambda x: float(x), data[:2]))
                 args = prepare_args(data[2:])
             else:
                 raise Exception(f"Can't recognise model {model}")
-
-            calculated = float(func(pars, args))
+            market = EvalArgs.from_tuple(args)
+            pricer = GenPricer(model=model.lower(), market=market, use_fft=True)
+            # calculated = float(func(pars, args))
+            calculated = pricer.price_call(pars) if market.is_call else pricer.price_put(pars)
+            assert len(calculated) == 1
             diff = abs(answer - calculated)
             if diff > 1e-2 * answer and diff > 1e-3 and not (answer < 0 and calculated == 0):
                 correct = False
@@ -93,5 +99,5 @@ def test_fft():
 
 
 if __name__ == "__main__":
-    test_fft()
-    # test_r()
+    # test_fft()
+    test_r()

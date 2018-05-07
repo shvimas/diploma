@@ -1,15 +1,25 @@
+import math
+
 import numpy as np
-from structs import EvalArgs
-import modeling as mo
+
+import black_scholes as bs
 import config
+import heston_pricing as he
+import ls_pricing as ls
+import vg_pricing as vg
+from structs import EvalArgs
 
 
 def mean(seq) -> float:
     return float(np.sum(seq) / len(seq))
 
 
-def mean_absolute_error(predicted, actual) -> float:
+def mae(predicted, actual) -> float:
     return mean(np.abs(predicted - actual))
+
+
+def rmse(predicted, actual) -> float:
+    return math.sqrt(mean((predicted - actual) ** 2))
 
 
 def ratio(predicted: np.ndarray, actual: np.ndarray) -> list:
@@ -19,26 +29,22 @@ def ratio(predicted: np.ndarray, actual: np.ndarray) -> list:
     return list(map(lambda x: np.abs(x) if x >= 1 else np.abs(1 / x), predicted / actual))
 
 
-def mean_ratio(predicted, actual) -> float:
+def mean_ratio(predicted: np.ndarray, actual: np.ndarray) -> float:
     return mean(ratio(predicted, actual))
 
 
-def robust_mean_ratio(predicted, actual, alpha=.05) -> float:
+def robust_mean_ratio(predicted: np.ndarray, actual: np.ndarray, alpha=.05) -> float:
     tmp = ratio(predicted, actual)
     n = len(tmp)
     p = n - int(n * alpha)
     return mean(sorted(tmp)[:p])
 
 
-metrics = {
-    "MAE":        mean_absolute_error,
-    "mean ratio": mean_ratio,
-    "MAR":        mean_ratio,
-    "RMR":        robust_mean_ratio
-}
+def ln(predicted: np.ndarray, actual: np.ndarray, n: float) -> float:
+    return mean(np.abs(predicted - actual) ** n) ** (1 / n)
 
 
-def apply_metric(predicted, actual, metric="MAE", **kwargs) -> float:
+def apply_metric(predicted: np.ndarray, actual: np.ndarray, metric: str, **kwargs) -> float:
     try:
         return metrics[metric](predicted, actual, **kwargs)
     except Warning:
@@ -48,6 +54,7 @@ def apply_metric(predicted, actual, metric="MAE", **kwargs) -> float:
 def is_good_enough(quality: float, metric: str) -> bool:
     values = {
         "MAE":        2,
+        "RMSE":       2,
         "mean ratio": 1.02,
         "RMR":        1.02
     }
@@ -69,7 +76,7 @@ def estimate_model(pars: tuple, args: EvalArgs, model: str, metric: str, prices:
 
     k = args.get_strikes()
 
-    if model not in mo.models.keys():
+    if model not in models.keys():
         raise Exception("Cannot use model " + model)
 
     if metric not in metrics.keys():
@@ -78,4 +85,19 @@ def estimate_model(pars: tuple, args: EvalArgs, model: str, metric: str, prices:
     if (type(prices) is not np.ndarray) | (type(k) is not np.ndarray) | (len(prices) != len(k)):
         raise Exception("strikes and prices should be np.arrays with same length")
 
-    return apply_metric(mo.models[model](pars=pars, args=args.as_tuple()), prices, metric)
+    return apply_metric(models[model](pars=pars, args=args.as_tuple()), prices, metric)
+
+
+metrics = {
+    "MAE":        mae,
+    "RMSE":       rmse,
+    "mean ratio": mean_ratio,
+    "MAR":        mean_ratio,
+    "RMR":        robust_mean_ratio
+}
+models = {
+    "heston": he.price_heston,
+    "vg":     vg.price_vg,
+    "ls":     ls.price_ls,
+    "bs":     bs.price_bs
+}

@@ -2,11 +2,15 @@ from typing import List
 
 
 class Info:
-    def __init__(self, date: str, mat: str, spot: str, rate: str):
+    def __init__(self, date: str, mat: str, spot: str, rate: str, mat_in_days=True):
         self.date = date
-        self.mat = int(mat) / 365
+        self.mat = int(mat) / 365 if mat_in_days else float(mat)
         self.spot = float(spot)
         self.rate = float(rate)
+
+    @staticmethod
+    def deafult():
+        return Info('', '1', '1', '1')
 
 
 class Data:
@@ -66,6 +70,14 @@ class EvalArgs:
             args.spot, args.strikes_call, args.maturity, args.r, args.q, args.is_call = t
         else:
             args.spot, args.strikes_put, args.maturity, args.r, args.q, args.is_call = t
+        try:
+            args.strikes_call = args.strikes_call.copy()
+        except AttributeError:
+            pass
+        try:
+            args.strikes_put = args.strikes_put.copy()
+        except AttributeError:
+            pass
         return args
 
     @staticmethod
@@ -79,6 +91,12 @@ class EvalArgs:
         args.q = rate
         args.is_call = None
         return args
+
+    def __eq__(self, other):
+        return self.as_tuple() == other.as_tuple()
+
+    def __copy__(self):
+        return EvalArgs.from_tuple(self.as_tuple())
 
     def get_strikes(self):
         if self.is_call is not None:

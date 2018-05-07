@@ -1,8 +1,11 @@
-from structs import EvalArgs
-import numpy as np
-from modeling import par_bounds, tune_model
 import re
+
+import numpy as np
+
+from config import par_bounds
 from data_helpers import array2str
+from modeling import tune_model
+from structs import EvalArgs
 
 
 def find_opt_rates(args: EvalArgs, actual: np.ndarray) -> dict:

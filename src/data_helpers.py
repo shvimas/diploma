@@ -1,13 +1,14 @@
 from math import exp
-import helper_funcs as hf
-from structs import Info, Data, EvalArgs
-import numpy as np
 from typing import List, Tuple
-import re
-import black_scholes as bs
-import gen_pricer as gp
+
+import numpy as np
 import scipy.optimize as opt
-import modeling as mo
+
+import black_scholes as bs
+import config
+import gen_pricer as gp
+from helper_funcs import bad_pars
+from structs import Info, Data, EvalArgs
 
 
 def array2str(arr: np.ndarray) -> str:
@@ -15,8 +16,8 @@ def array2str(arr: np.ndarray) -> str:
 
 
 def remove_options(data: Data, info: List[Info],
-                   rate=.03, remove_itm: bool = False) -> Tuple[Data, List[Info]]:
-    inv_factor = -1 if remove_itm else 1
+                   rate=.008, remove_itm: bool = False) -> Tuple[Data, List[Info]]:
+    inv_factor = 1 if remove_itm else -1
     for day in range(len(info)):
         spot = info[day].spot
         tau = info[day].mat
@@ -31,11 +32,13 @@ def remove_options(data: Data, info: List[Info],
     return data, info
 
 
-def cut_tails(data: Data, info, min_perc=.01, min_price=10) -> Tuple[Data, List[Info]]:
+def cut_tails(data: Data, info, min_perc=.01, max_perc=.5, min_price=10) -> Tuple[Data, List[Info]]:
     for day in range(len(info)):
         spot = info[day].spot
-        good_calls = (data.prices[True][day] > min_price) & (data.prices[True][day] / spot > min_perc)
-        good_puts = (data.prices[False][day] > min_price) & (data.prices[False][day] / spot > min_perc)
+        cprices = data.prices[True][day]
+        pprices = data.prices[False][day]
+        good_calls = (cprices > min_price) & (cprices / spot > min_perc) & (cprices / spot < max_perc)
+        good_puts = (pprices > min_price) & (pprices / spot > min_perc) & (pprices / spot < max_perc)
         data.strikes[True][day] = data.strikes[True][day][good_calls]
         data.prices[True][day] = data.prices[True][day][good_calls]
         data.strikes[False][day] = data.strikes[False][day][good_puts]
@@ -53,7 +56,7 @@ def cut_by_bs_delta(data: Data, info: List[Info], rate=0.008, disp=False) -> Tup
         result: opt.OptimizeResult = pricer.optimize_pars(metric='MAE',
                                                           actual_calls=data.prices[True][day],
                                                           actual_puts=data.prices[False][day],
-                                                          bounds=mo.par_bounds['bs'],
+                                                          bounds=config.par_bounds['bs'],
                                                           optimizer=opt.differential_evolution,
                                                           polish=True, disp=disp)
         bs_sigma = result.x[0]
@@ -73,21 +76,6 @@ def cut_by_bs_delta(data: Data, info: List[Info], rate=0.008, disp=False) -> Tup
 
 def prepare_data(data: Data, info: List[Info]) -> Tuple[Data, List[Info]]:
     return cut_by_bs_delta(*cut_tails(data=data, info=info))
-
-
-def extract_centers(filename: str):
-    with open(filename) as f:
-        for line in f.readlines():
-            if 'with params' in line:
-                yield tuple(map(lambda x: float(x), (re.search(r'.*with params: (.*)', line).group(1).split(", "))))
-            elif 'with func value' in line:
-                yield tuple(map(lambda x: float(x), (re.search(r'.*value .*: (.*)', line).group(1).split(", "))))
-            elif 'tune' in filename:
-                yield tuple(map(lambda x: float(x), (re.search(r'.*: (.*)', line).group(1).split(", "))))
-            elif 'Day' in line or line is '\n':
-                continue
-            else:
-                raise ValueError(f'bad line: {line}')
 
 
 try:
@@ -126,47 +114,3 @@ try:
 
 except ImportError:
     pass
-
-
-def get_pca_data(model: str) -> tuple:
-    with open(f'params/pca_{model}.txt', 'r') as fin:
-        lines = fin.readlines()
-        bounds = hf.extract_floats(lines[0])
-        factors = np.array(list(map(
-            lambda arr: hf.extract_floats(arr),
-            re.findall(r'\[.+?\]', lines[1]))))
-        means = np.array(hf.extract_floats(lines[2]))
-        return bounds, factors, means
-
-
-def bad_pars(pars: tuple, bounds_only: bool, model: str) -> bool:
-    import ls_pricing as ls
-    import vg_pricing as vg
-    import heston_pricing as he
-    if model == 'ls':
-        return ls.bad_pars(*pars, bounds_only=bounds_only)
-    elif model == 'vg':
-        return vg.bad_pars(*pars, bounds_only=bounds_only)
-    elif model == 'heston':
-        return he.bad_pars(*pars, bounds_only=bounds_only)
-    raise ValueError(f"Unknown model {model}")
-
-
-def get_tuned_params(model1: str, model2: str, drop_bad: bool, bounds_only=True) -> np.ndarray:
-    pars = np.array(hf.gen2list(extract_centers(f"params/tune_{model2}_with_{model1}.txt")))
-    if drop_bad:
-        pars = pars[list(map(lambda p: not bad_pars(pars=p, bounds_only=bounds_only, model=model2), pars))]
-    return pars
-
-
-def get_tuning_dots(pricing_model: str, tuning_model: str, from_grid: bool) -> np.ndarray:
-    if from_grid:
-        bounds, factors, means = get_pca_data(model=pricing_model)
-        return hf.grid(*bounds, n=20) @ factors + means
-    else:
-        # need to preserve the number of dots, so do not drop bad params
-        return get_tuned_params(model1=pricing_model, model2=tuning_model, drop_bad=False)
-
-
-def cut_bad_pars(pars: np.ndarray, model: str, bounds_only: bool) -> np.ndarray:
-    return pars[~np.array(list(map(lambda par: bad_pars(pars=par, bounds_only=bounds_only, model=model), pars)))]

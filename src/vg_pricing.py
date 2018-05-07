@@ -1,10 +1,10 @@
-from scipy import *
-import numpy as np
+import warnings as wr
 
+from scipy import *
+
+import config
 import helper_funcs as hf
 import integration
-import warnings as wr
-import config
 
 
 def price_vg(pars: tuple, args: tuple, strict=False, check=False, bounds_only=True) -> ndarray:
@@ -40,9 +40,9 @@ def price_vg(pars: tuple, args: tuple, strict=False, check=False, bounds_only=Tr
         return np.array([config.inf_price] * len(k))
 
     if is_call:
-        return hf.not_less_than_zero(call_prices).flatten()
+        return hf.cut_negative(call_prices).flatten()
     else:
-        return hf.not_less_than_zero(
+        return hf.cut_negative(
             call_prices.flatten() + np.array(k) * exp(-r * tau) - np.array([s] * len(k)) * exp(-q * tau))
 
 

@@ -1,5 +1,7 @@
-from scipy.stats import norm
 import numpy as np
+from scipy.optimize import minimize
+from scipy.stats import norm
+
 import helper_funcs
 
 
@@ -13,9 +15,9 @@ def price_bs(pars: tuple, args: tuple) -> np.ndarray:
     sigma = pars[0]
     spot, strikes, t, r, q, is_call = args
     if is_call:
-        return helper_funcs.not_less_than_zero(bs_call_price(spot, strikes, r, q, t, sigma))
+        return helper_funcs.cut_negative(bs_call_price(spot, strikes, r, q, t, sigma))
     else:
-        return helper_funcs.not_less_than_zero(bs_put_price(spot, strikes, r, q, t, sigma))
+        return helper_funcs.cut_negative(bs_put_price(spot, strikes, r, q, t, sigma))
 
 
 def bs_call_price(spot: np.ndarray, strikes: np.ndarray,
@@ -35,3 +37,8 @@ def bs_delta(spot: float, strikes: np.ndarray,
              r: float, q: float, t: float, bs_sigma: float, is_call: bool) -> np.ndarray:
     d1 = (np.log(spot / strikes) + (r - q + bs_sigma * bs_sigma / 2) * t) / bs_sigma / t ** .5
     return norm.cdf(d1) if is_call else norm.cdf(d1) - 1
+
+
+def implied_sigma(spot: float, strike: float, r: float, q: float, t: float, is_call: bool, price: float):
+    args = (spot, strike, t, r, q, is_call)
+    return minimize(fun=lambda sigma: (price - price_bs((sigma, ), args)) ** 2, x0=np.array([.1]))

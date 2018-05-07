@@ -1,13 +1,17 @@
 import numpy as np
 from scipy.integrate import simps, quad
-import config as cfg
+
+
+lower_ = 1e-30
+upper_ = 100
+n_ = 2000
 
 
 class Integrator:
     def __init__(self):
-        self.n = cfg.n
-        self.lower = cfg.lower
-        self.upper = cfg.upper
+        self.n = n_
+        self.lower = lower_
+        self.upper = upper_
         self.integrate_vectorized_impl = Integrator.integrate_simpson_vectorized_impl
         self.integrate_impl = lambda f, lower, upper: quad(func=f, a=lower, b=upper)[0]
 
