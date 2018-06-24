@@ -97,9 +97,19 @@ def tuning():
 
 
 def main():
-    # pricing()
+    pricing()
     tuning()
+
+
+def sqrt():
+    import math
+
+    times = 1000000
+
+    print(td_decorator(func=lambda: math.sqrt(1000), times=times, seconds=False)())
+    print(td_decorator(func=lambda: np.sqrt(1000), times=times, seconds=False)())
 
 
 if __name__ == '__main__':
     main()
+    sqrt()

@@ -5,7 +5,7 @@ import numpy as np
 import data_helpers as dh
 import helper_funcs as hf
 from structs import EvalArgs
-from tuning import tune_model, calibrate
+from tuning import tune_model
 
 
 def tune_all_models(market: EvalArgs, metric: str):
@@ -35,6 +35,13 @@ def main() -> None:
 
     data, info = hf.read_new_data()
 
+    print("Preparing data...")
+    try:
+        data = hf.get_prepared_data()
+    except FileNotFoundError:
+        data, info = dh.prepare_data(data=data, info=info)
+    print("Done")
+
     day = 0
     metric = "RMSE"
     is_call = None
@@ -43,26 +50,19 @@ def main() -> None:
                       k_put=data.strikes[False][day],
                       tau=info[day].mat, r=.008, q=.008, call=is_call)
 
-    print("Preparing data...")
-    try:
-        data = hf.get_prepared_data(from_dir='noene')
-    except FileNotFoundError:
-        data, info = dh.prepare_data(data=data, info=info)
-    print("Done")
+    # models = ('heston', 'vg', 'ls', 'bs')
+    # kwargs = [{
+    #     'data': data,
+    #     'rate': .008,
+    #     'disp': False,
+    #     'use_fft': True,
+    #     'polish': True
+    # }] * len(models)
+    # all_args = zip(models, [metric] * len(models), [info] * len(models), [is_call] * len(models), kwargs)
+    # pool = Pool()
+    # pool.map(calibrate, all_args)
 
-    models = ('heston', 'vg', 'ls', 'bs')
-    kwargs = [{
-        'data': data,
-        'rate': .008,
-        'disp': False,
-        'use_fft': True,
-        'polish': True
-    }] * len(models)
-    all_args = zip(models, [metric] * len(models), [info] * len(models), [is_call] * len(models), kwargs)
-    pool = Pool()
-    pool.map(calibrate, all_args)
-
-    # tune_all_models(market=market, metric=metric)
+    tune_all_models(market=market, metric=metric)
 
 
 if __name__ == "__main__":

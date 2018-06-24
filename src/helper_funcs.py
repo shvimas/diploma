@@ -220,7 +220,7 @@ def get_eval_values(model: str, metric: str, is_call: bool) -> List[float]:
 
 
 def get_pca_data(model: str) -> tuple:
-    with open(f'params/pca_{model}.txt', 'r') as fin:
+    with open(f'{cfg.root_dir}/params/pca_{model}.txt', 'r') as fin:
         lines = fin.readlines()
         bounds = extract_floats(lines[0])
         factors = np.array(list(map(
@@ -257,7 +257,7 @@ def get_tuned_params(model1: str, model2: str, metric: str, drop_bad: bool, boun
 def get_tuning_dots(pricing_model: str, tuning_model: str, metric: str, from_grid: bool) -> np.ndarray:
     if from_grid:
         bounds, factors, means = get_pca_data(model=pricing_model)
-        return grid(*bounds, n=20) @ factors + means
+        return grid(*bounds, n=32) @ factors + means
     else:
         # need to preserve the number of dots, so do not drop bad params
         return get_tuned_params(model1=pricing_model, model2=tuning_model, metric=metric, drop_bad=False)

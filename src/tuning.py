@@ -58,7 +58,7 @@ def tune_model(args: tuple):
         raise ValueError(f"{model1} is not yet tuned with {model3}")
 
     if market.is_call is not None:
-        raise ValueError('market.is_call is supposed to None(both calls and puts)')
+        raise ValueError('market.is_call is supposed to None(means both calls and puts)')
 
     if not logfile.startswith('params/') and os.getcwd().endswith('/diploma'):
         logfile = 'params/' + logfile

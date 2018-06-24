@@ -65,3 +65,35 @@ def bic(k: int, actual: np.ndarray, predicted: np.ndarray) -> np.ndarray:
     n = len(actual)
     rmse = np.sqrt(((actual - predicted) ** 2).mean())
     return k * np.log(n) + n * np.log(rmse)
+
+
+def vg_dots_to_vol_skew_kurtosis(dots: np.ndarray) -> np.ndarray:
+    def vol(nu: np.ndarray, theta: np.ndarray, sigma: np.ndarray) -> np.ndarray:
+        return np.sqrt(theta ** 2 * nu + sigma ** 2)
+
+    # noinspection PyShadowingNames
+    def skew(nu: np.ndarray, theta: np.ndarray, sigma: np.ndarray, vols: np.ndarray) -> np.ndarray:
+        mu_3 = 2 * theta ** 3 * nu ** 2 + 3 * sigma ** 2 * theta * nu
+        return mu_3 / (vols ** 3)
+
+    # noinspection PyShadowingNames
+    def kurtosis(nu: np.ndarray, theta: np.ndarray, sigma: np.ndarray, vols: np.ndarray) -> np.ndarray:
+        mu_4 = 3 * sigma ** 4 * nu + \
+               12 * sigma ** 2 * theta ** 2 * nu ** 2 + \
+               6 * theta ** 4 * nu ** 3 + \
+               3 * sigma ** 4 + \
+               6 * sigma ** 2 * theta ** 2 * nu + \
+               3 * theta ** 4 * nu ** 2
+        return mu_4 / (vols ** 4) - 3
+
+    assert dots.shape[1] == 3
+    dots_tr = dots.transpose()
+    nus, thetas, sigmas = dots_tr[0], dots_tr[1], dots_tr[2]
+    vols = vol(nu=nus, theta=thetas, sigma=sigmas).reshape([1, dots.shape[0]])
+    skews = skew(nu=nus, theta=thetas, sigma=sigmas, vols=vols).reshape([1, dots.shape[0]])
+    kurtosises = kurtosis(nu=nus, theta=thetas, sigma=sigmas, vols=vols).reshape([1, dots.shape[0]])
+    return np.concatenate((vols, skews, kurtosises), axis=0).transpose()
+
+
+if __name__ == '__main__':
+    save_scores()
